@@ -941,3 +941,39 @@ a:focus-visible {
     border: 1px solid #000;
   }
 }
+
+/* Add these styles to your App.css file */
+
+.flag-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon .flag-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Ronaldo GIF animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-section img {
+  animation: slideIn 0.5s ease-out;
+}

@@ -1,13 +1,14 @@
 import React, { useState, useRef, useCallback } from "react";
 import "./App.css";
 import ConectysLogo from "./conectys.png";
+import RonaldoGif from "./ronaldo.gif";
 import { PDFDocument, PDFName, PDFDict, PDFRawStream } from "pdf-lib";
 
 /* ------------------- PDF‑JS IMPORT ------------------- */
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 
 // Use local worker file from public folder (works for both local and GitHub Pages)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/pdf.worker.min.js` : "/pdf.worker.min.js";
 
 /* ------------------- ICON COMPONENTS ------------------- */
 // … (your Icon components – unchanged) …
@@ -39,6 +40,32 @@ const IconSun = () => (
     <line x1='18.36' y1='18.36' x2='19.78' y2='19.78' />
     <line x1='1' y1='12' x2='3' y2='12' />
     <line x1='21' y1='12' x2='23' y2='12' />
+  </svg>
+);
+const IconPortugueseFlag = () => (
+  <svg className='icon flag-icon' viewBox='0 0 600 400' fill='none'>
+    <rect width='600' height='400' fill='#FF0000' />
+    <rect width='240' height='400' fill='#006600' />
+    <circle cx='240' cy='200' r='80' fill='#FFD700' stroke='#000' strokeWidth='3' />
+    <circle cx='240' cy='200' r='60' fill='#FFF' stroke='#000' strokeWidth='2' />
+    <circle cx='240' cy='200' r='45' fill='#0000FF' stroke='#000' strokeWidth='2' />
+  </svg>
+);
+const IconEnglishFlag = () => (
+  <svg className='icon flag-icon' viewBox='0 0 60 30'>
+    <clipPath id='s'>
+      <path d='M0,0 v30 h60 v-30 z' />
+    </clipPath>
+    <clipPath id='t'>
+      <path d='M30,15 h30 v15 z v-15 h-30 z h-30 v15 z v-15 h30 z' />
+    </clipPath>
+    <g clipPath='url(#s)'>
+      <path d='M0,0 v30 h60 v-30 z' fill='#012169' />
+      <path d='M0,0 L60,30 M60,0 L0,30' stroke='#fff' strokeWidth='6' />
+      <path d='M0,0 L60,30 M60,0 L0,30' clipPath='url(#t)' stroke='#C8102E' strokeWidth='4' />
+      <path d='M30,0 v30 M0,15 h60' stroke='#fff' strokeWidth='10' />
+      <path d='M30,0 v30 M0,15 h60' stroke='#C8102E' strokeWidth='6' />
+    </g>
   </svg>
 );
 const IconGitHub = () => (
@@ -280,6 +307,123 @@ function validatePDF(file) {
 
 /* ------------------- MAIN APP COMPONENT ------------------- */
 function App() {
+  /* ---------- Language ---------- */
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem("language");
+    return saved || "en";
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("language", language);
+  }, [language]);
+
+  const translations = {
+    en: {
+      brand: "PDF Compressor",
+      selectOrDrop: "Select or Drop PDF to Compress",
+      dropHere: "Drop your PDF here",
+      subtitle: "Fast, secure, client‑side compression",
+      chooseFile: "Choose File",
+      originalSize: "Original size",
+      pages: "pages",
+      page: "page",
+      removeFile: "Remove file",
+      error: "Error",
+      note: "Note",
+      compressionSuccessful: "Compression Successful!",
+      compressionComplete: "Compression Complete",
+      reducedBy: "Reduced by",
+      originalSizeLabel: "Original Size",
+      compressedSize: "Compressed Size",
+      sizeReduction: "Size Reduction",
+      bytesSaved: "Bytes Saved",
+      targetLabel: "10 MB Target",
+      met: "✓ Met",
+      exceeded: "⚠ Exceeded",
+      pageCount: "Page Count",
+      download: "Download Compressed PDF",
+      compressAnother: "Compress Another File",
+      howItWorks: "How It Works",
+      howItWorksItems: [
+        { title: "Upload:", text: "select your PDF or drag & drop." },
+        { title: "Compress:", text: "metadata is stripped, images are down‑scaled & re‑encoded, with an automatic raster fallback." },
+        { title: "Download:", text: "get the smaller PDF instantly." },
+        { title: "Privacy:", text: "all processing happens in the browser; nothing leaves the client." },
+      ],
+      features: "Features",
+      featuresItems: [
+        "Fast, client‑side processing",
+        "Metadata stripping & object‑stream compression",
+        "Smart image optimisation (down‑scale, JPEG quality)",
+        "Automatic raster fallback for stubborn PDFs",
+        "Free, open‑source, no‑tracking",
+        "Works offline",
+      ],
+      bestResults: "Best Results",
+      bestResultsItems: [
+        { title: "Works best on:", text: "PDFs that contain uncompressed raster images or duplicated objects." },
+        { title: "Limited on:", text: "PDFs already optimised or vector‑only documents." },
+        { title: "Maximum size:", text: "500 MB (browser memory limit)." },
+        { title: "Supported formats:", text: "Standard PDF (encrypted PDFs may not work)." },
+      ],
+      footer: "© 2026 PDF Compressor. Free & Open Source.",
+      githubText: "View on GitHub",
+    },
+    pt: {
+      brand: "Compressor de PDF",
+      selectOrDrop: "Seleciona ou Arrasta o PDF para Comprimir",
+      dropHere: "Larga o teu PDF aqui",
+      subtitle: "Compressão rápida, segura e local",
+      chooseFile: "Escolher Ficheiro",
+      originalSize: "Tamanho original",
+      pages: "páginas",
+      page: "página",
+      removeFile: "Remover ficheiro",
+      error: "Erro",
+      note: "Nota",
+      compressionSuccessful: "Compressão Bem-Sucedida!",
+      compressionComplete: "Compressão Concluída",
+      reducedBy: "Reduzido em",
+      originalSizeLabel: "Tamanho Original",
+      compressedSize: "Tamanho Comprimido",
+      sizeReduction: "Redução de Tamanho",
+      bytesSaved: "Bytes Poupados",
+      targetLabel: "Meta de 10 MB",
+      met: "✓ Atingida",
+      exceeded: "⚠ Excedida",
+      pageCount: "Número de Páginas",
+      download: "Descarregar PDF Comprimido",
+      compressAnother: "Comprimir Outro Ficheiro",
+      howItWorks: "Como Funciona",
+      howItWorksItems: [
+        { title: "Carregar:", text: "seleciona o teu PDF ou arrasta e larga." },
+        { title: "Comprimir:", text: "metadados são removidos, imagens são redimensionadas e recodificadas, com recurso automático a rasterização." },
+        { title: "Descarregar:", text: "obtém o PDF mais pequeno instantaneamente." },
+        { title: "Privacidade:", text: "todo o processamento ocorre no navegador; nada sai do cliente." },
+      ],
+      features: "Funcionalidades",
+      featuresItems: [
+        "Processamento rápido e local",
+        "Remoção de metadados e compressão de objectos",
+        "Optimização inteligente de imagens (redimensionamento, qualidade JPEG)",
+        "Recurso automático a rasterização para PDFs difíceis",
+        "Gratuito, código aberto, sem rastreamento",
+        "Funciona offline",
+      ],
+      bestResults: "Melhores Resultados",
+      bestResultsItems: [
+        { title: "Funciona melhor em:", text: "PDFs que contêm imagens raster não comprimidas ou objectos duplicados." },
+        { title: "Limitado em:", text: "PDFs já optimizados ou documentos apenas vectoriais." },
+        { title: "Tamanho máximo:", text: "500 MB (limite de memória do navegador)." },
+        { title: "Formatos suportados:", text: "PDF padrão (PDFs encriptados podem não funcionar)." },
+      ],
+      footer: "© 2026 Compressor de PDF. Gratuito e Código Aberto.",
+      githubText: "Ver no GitHub",
+    },
+  };
+
+  const t = translations[language];
+
   /* ---------- Theme ---------- */
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("theme");
@@ -444,9 +588,17 @@ function App() {
       <nav className='navbar'>
         <div className='nav-brand'>
           <img src={ConectysLogo} alt='Conectys Logo' className='brand-logo' />
-          <span className='brand-text'>PDF Compressor</span>
+          <span className='brand-text'>{t.brand}</span>
         </div>
         <div className='nav-actions'>
+          <button
+            className='btn-icon'
+            onClick={() => setLanguage(language === "en" ? "pt" : "en")}
+            aria-label='Toggle language'
+            title={language === "en" ? "Mudar para Português" : "Switch to English"}
+          >
+            {language === "en" ? <IconPortugueseFlag /> : <IconEnglishFlag />}
+          </button>
           <button
             className='btn-icon'
             onClick={() => setDarkMode(!darkMode)}
@@ -473,8 +625,8 @@ function App() {
             >
               <input ref={fileInputRef} type='file' accept='.pdf,application/pdf' hidden onChange={e => handleFileSelect(e.target.files?.[0])} />
               <IconUpload />
-              <h3>Select or Drop PDF to Compress</h3>
-              <p className='upload-subtitle'>{isDragging ? "Drop your PDF here" : "Fast, secure, client‑side compression"}</p>
+              <h3>{t.selectOrDrop}</h3>
+              <p className='upload-subtitle'>{isDragging ? t.dropHere : t.subtitle}</p>
               <button
                 className='btn-primary btn-upload'
                 onClick={e => {
@@ -482,7 +634,7 @@ function App() {
                   fileInputRef.current?.click();
                 }}
               >
-                Choose File
+                {t.chooseFile}
               </button>
             </div>
           ) : (
@@ -492,14 +644,16 @@ function App() {
                 <IconFile />
                 <div className='file-details'>
                   <h3>{file.name}</h3>
-                  <p>Original size: {formatBytes(originalSize)}</p>
+                  <p>
+                    {t.originalSize}: {formatBytes(originalSize)}
+                  </p>
                   {pageCount > 0 && (
                     <p className='page-count'>
-                      {pageCount} page{pageCount !== 1 ? "s" : ""}
+                      {pageCount} {pageCount !== 1 ? t.pages : t.page}
                     </p>
                   )}
                 </div>
-                <button className='btn-icon btn-danger' onClick={handleReset} title='Remove file' disabled={compressing}>
+                <button className='btn-icon btn-danger' onClick={handleReset} title={t.removeFile} disabled={compressing}>
                   <IconTrash />
                 </button>
               </div>
@@ -522,7 +676,7 @@ function App() {
                 <div className='error-message'>
                   <IconAlert />
                   <div>
-                    <strong>Error</strong>
+                    <strong>{t.error}</strong>
                     <p>{error}</p>
                   </div>
                 </div>
@@ -533,7 +687,7 @@ function App() {
                 <div className='warning-message'>
                   <IconInfo />
                   <div>
-                    <strong>Note</strong>
+                    <strong>{t.note}</strong>
                     <p>{warning}</p>
                   </div>
                 </div>
@@ -545,41 +699,48 @@ function App() {
                   <div className={`success-banner ${metTarget ? "target-met" : ""}`}>
                     {metTarget ? <IconCheck /> : <IconInfo />}
                     <div>
-                      <strong>{metTarget ? "Compression Successful!" : "Compression Complete"}</strong>
+                      <strong>{metTarget ? t.compressionSuccessful : t.compressionComplete}</strong>
                       <p>
-                        Reduced by {formatBytes(savedBytes)} ({compressionRatio}%)
+                        {t.reducedBy} {formatBytes(savedBytes)} ({compressionRatio}%)
                       </p>
                     </div>
                   </div>
 
+                  {/* Ronaldo SIUUU GIF for Portuguese speakers when target is met */}
+                  {metTarget && language === "pt" && (
+                    <div style={{ textAlign: "center", margin: "20px 0" }}>
+                      <img src={RonaldoGif} alt='Cristiano Ronaldo SIUUU' style={{ maxWidth: "300px", borderRadius: "10px" }} />
+                    </div>
+                  )}
+
                   <div className='result-stats'>
                     <div className='stat-item'>
-                      <span className='stat-label'>Original Size</span>
+                      <span className='stat-label'>{t.originalSizeLabel}</span>
                       <span className='stat-value'>{formatBytes(originalSize)}</span>
                     </div>
 
                     <div className='stat-item'>
-                      <span className='stat-label'>Compressed Size</span>
+                      <span className='stat-label'>{t.compressedSize}</span>
                       <span className={`stat-value ${metTarget ? "success" : "warning"}`}>{formatBytes(compressedSize)}</span>
                     </div>
 
                     <div className='stat-item'>
-                      <span className='stat-label'>Size Reduction</span>
+                      <span className='stat-label'>{t.sizeReduction}</span>
                       <span className='stat-value success'>{compressionRatio}%</span>
                     </div>
 
                     <div className='stat-item'>
-                      <span className='stat-label'>Bytes Saved</span>
+                      <span className='stat-label'>{t.bytesSaved}</span>
                       <span className='stat-value'>{formatBytes(savedBytes)}</span>
                     </div>
 
                     <div className='stat-item'>
-                      <span className='stat-label'>10 MB Target</span>
-                      <span className={`stat-value ${metTarget ? "success" : "warning"}`}>{metTarget ? "✓ Met" : "⚠ Exceeded"}</span>
+                      <span className='stat-label'>{t.targetLabel}</span>
+                      <span className={`stat-value ${metTarget ? "success" : "warning"}`}>{metTarget ? t.met : t.exceeded}</span>
                     </div>
 
                     <div className='stat-item'>
-                      <span className='stat-label'>Page Count</span>
+                      <span className='stat-label'>{t.pageCount}</span>
                       <span className='stat-value'>{pageCount}</span>
                     </div>
                   </div>
@@ -587,11 +748,11 @@ function App() {
                   <div className='action-buttons'>
                     <button className='btn-download btn-primary' onClick={handleDownload}>
                       <IconDownload />
-                      <span>Download Compressed PDF</span>
+                      <span>{t.download}</span>
                     </button>
                     <button className='btn-action btn-secondary' onClick={handleReset}>
                       <IconCompress />
-                      <span>Compress Another File</span>
+                      <span>{t.compressAnother}</span>
                     </button>
                   </div>
                 </div>
@@ -604,69 +765,42 @@ function App() {
             <div className='info-card'>
               <div className='info-header'>
                 <IconInfo />
-                <h3>How It Works</h3>
+                <h3>{t.howItWorks}</h3>
               </div>
               <ul>
-                <li>
-                  <strong>Upload:</strong> select your PDF or drag & drop.
-                </li>
-                <li>
-                  <strong>Compress:</strong> metadata is stripped, images are down‑scaled & re‑encoded, with an automatic raster fallback.
-                </li>
-                <li>
-                  <strong>Download:</strong> get the smaller PDF instantly.
-                </li>
-                <li>
-                  <strong>Privacy:</strong> all processing happens in the browser; nothing leaves the client.
-                </li>
+                {t.howItWorksItems.map((item, i) => (
+                  <li key={i}>
+                    <strong>{item.title}</strong> {item.text}
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div className='info-card'>
               <div className='info-header'>
                 <IconCheck />
-                <h3>Features</h3>
+                <h3>{t.features}</h3>
               </div>
               <ul>
-                <li>
-                  <strong>Fast, client‑side processing</strong>
-                </li>
-                <li>
-                  <strong>Metadata stripping & object‑stream compression</strong>
-                </li>
-                <li>
-                  <strong>Smart image optimisation (down‑scale, JPEG quality)</strong>
-                </li>
-                <li>
-                  <strong>Automatic raster fallback for stubborn PDFs</strong>
-                </li>
-                <li>
-                  <strong>Free, open‑source, no‑tracking</strong>
-                </li>
-                <li>
-                  <strong>Works offline</strong>
-                </li>
+                {t.featuresItems.map((item, i) => (
+                  <li key={i}>
+                    <strong>{item}</strong>
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div className='info-card'>
               <div className='info-header'>
                 <IconAlert />
-                <h3>Best Results</h3>
+                <h3>{t.bestResults}</h3>
               </div>
               <ul>
-                <li>
-                  <strong>Works best on:</strong> PDFs that contain uncompressed raster images or duplicated objects.
-                </li>
-                <li>
-                  <strong>Limited on:</strong> PDFs already optimised or vector‑only documents.
-                </li>
-                <li>
-                  <strong>Maximum size:</strong> 500 MB (browser memory limit).
-                </li>
-                <li>
-                  <strong>Supported formats:</strong> Standard PDF (encrypted PDFs may not work).
-                </li>
+                {t.bestResultsItems.map((item, i) => (
+                  <li key={i}>
+                    <strong>{item.title}</strong> {item.text}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -676,7 +810,7 @@ function App() {
       {/* ---------- Footer ---------- */}
       <footer className='footer'>
         <div className='footer-content'>
-          <p>© 2026 PDF Compressor. Free &amp; Open Source.</p>
+          <p>{t.footer}</p>
           <a
             href='https://github.com/Joaosilva27/pdf-compressor'
             target='_blank'
@@ -685,7 +819,7 @@ function App() {
             aria-label='GitHub Repository'
           >
             <IconGitHub />
-            <span>View on GitHub</span>
+            <span>{t.githubText}</span>
           </a>
         </div>
       </footer>
