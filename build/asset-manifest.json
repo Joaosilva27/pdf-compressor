@@ -1,16 +1,17 @@
 {
   "files": {
-    "main.css": "/pdf-compressor/static/css/main.c3453c65.css",
-    "main.js": "/pdf-compressor/static/js/main.ec4b8240.js",
+    "main.css": "/pdf-compressor/static/css/main.5c53cebb.css",
+    "main.js": "/pdf-compressor/static/js/main.0add6d15.js",
     "static/js/488.cfa34379.chunk.js": "/pdf-compressor/static/js/488.cfa34379.chunk.js",
+    "static/media/ronaldo.gif": "/pdf-compressor/static/media/ronaldo.6f1f9efd69109300391e.gif",
     "static/media/conectys.png": "/pdf-compressor/static/media/conectys.08aba113d830072e77b9.png",
     "index.html": "/pdf-compressor/index.html",
-    "main.c3453c65.css.map": "/pdf-compressor/static/css/main.c3453c65.css.map",
-    "main.ec4b8240.js.map": "/pdf-compressor/static/js/main.ec4b8240.js.map",
+    "main.5c53cebb.css.map": "/pdf-compressor/static/css/main.5c53cebb.css.map",
+    "main.0add6d15.js.map": "/pdf-compressor/static/js/main.0add6d15.js.map",
     "488.cfa34379.chunk.js.map": "/pdf-compressor/static/js/488.cfa34379.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c3453c65.css",
-    "static/js/main.ec4b8240.js"
+    "static/css/main.5c53cebb.css",
+    "static/js/main.0add6d15.js"
   ]
 }

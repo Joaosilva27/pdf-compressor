@@ -167,9 +167,11 @@ async function reEncodeImage(imgBytes, isJpeg, maxDim, jpegQuality) {
 /* --------------------------------------------------------------
    1️⃣  Fast (image‑only) compression – primary path
    -------------------------------------------------------------- */
-async function compressPDFFast(pdfBytes, onProgress) {
-  const MAX_DIMENSION = 1500; // px
-  const JPEG_QUALITY = 0.6; // 60 %
+async function compressPDFFast(pdfBytes, quality, onProgress) {
+  // Map quality (0-100) to max dimension and JPEG quality
+  // Lower quality = more compression = smaller dimensions & lower JPEG quality
+  const MAX_DIMENSION = Math.round(500 + (quality / 100) * 2500); // 500px to 3000px
+  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65; // 0.3 to 0.95
 
   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const pageCount = pdfDoc.getPageCount();
@@ -240,15 +242,19 @@ async function compressPDFFast(pdfBytes, onProgress) {
 /* --------------------------------------------------------------
    2️⃣  Raster fallback – uses pdfjs to render each page
    -------------------------------------------------------------- */
-async function compressPDFRaster(pdfBytes, onProgress) {
+async function compressPDFRaster(pdfBytes, quality, onProgress) {
   const uint8 = new Uint8Array(pdfBytes);
   const loadingTask = pdfjsLib.getDocument({ data: uint8, disableAutoFetch: true });
   const pdf = await loadingTask.promise;
   const pageCount = pdf.numPages;
 
+  // Map quality to scale and JPEG quality for rasterization
+  const SCALE = 0.5 + (quality / 100) * 1.5; // 0.5x to 2x scale
+  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65; // 0.3 to 0.95
+
   async function rasterisePage(pageNumber) {
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: SCALE });
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
@@ -256,7 +262,7 @@ async function compressPDFRaster(pdfBytes, onProgress) {
 
     await page.render({ canvasContext: ctx, viewport }).promise;
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+    const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
     const base64 = dataUrl.split(",")[1];
     const imgBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     canvas.remove();
@@ -282,13 +288,13 @@ async function compressPDFRaster(pdfBytes, onProgress) {
 /* --------------------------------------------------------------
    Unified entry point – try fast, fall back to raster
    -------------------------------------------------------------- */
-async function compressPDFUnified(pdfBytes, onProgress) {
+async function compressPDFUnified(pdfBytes, quality, onProgress) {
   try {
-    return await compressPDFFast(pdfBytes, onProgress);
+    return await compressPDFFast(pdfBytes, quality, onProgress);
   } catch (fastErr) {
     console.warn("Fast compression failed, falling back to rasterisation:", fastErr);
     try {
-      return await compressPDFRaster(pdfBytes, onProgress);
+      return await compressPDFRaster(pdfBytes, quality, onProgress);
     } catch (rasterErr) {
       console.error("Raster fallback also failed:", rasterErr);
       throw new Error(`Both compression methods failed – ${rasterErr instanceof Error ? rasterErr.message : rasterErr}`);
@@ -343,9 +349,14 @@ function App() {
       pageCount: "Page Count",
       download: "Download Compressed PDF",
       compressAnother: "Compress Another File",
+      qualityLabel: "Compression Quality",
+      qualityLow: "Max Compression",
+      qualityHigh: "Max Quality",
+      qualityDescription: "Lower quality = smaller file size, Higher quality = better visual fidelity",
       howItWorks: "How It Works",
       howItWorksItems: [
         { title: "Upload:", text: "select your PDF or drag & drop." },
+        { title: "Adjust Quality:", text: "use the slider to balance compression vs quality." },
         { title: "Compress:", text: "metadata is stripped, images are down‑scaled & re‑encoded, with an automatic raster fallback." },
         { title: "Download:", text: "get the smaller PDF instantly." },
         { title: "Privacy:", text: "all processing happens in the browser; nothing leaves the client." },
@@ -353,6 +364,7 @@ function App() {
       features: "Features",
       featuresItems: [
         "Fast, client‑side processing",
+        "Adjustable compression quality",
         "Metadata stripping & object‑stream compression",
         "Smart image optimisation (down‑scale, JPEG quality)",
         "Automatic raster fallback for stubborn PDFs",
@@ -394,9 +406,14 @@ function App() {
       pageCount: "Número de Páginas",
       download: "Descarregar PDF Comprimido",
       compressAnother: "Comprimir Outro Ficheiro",
+      qualityLabel: "Qualidade de Compressão",
+      qualityLow: "Compressão Máxima",
+      qualityHigh: "Qualidade Máxima",
+      qualityDescription: "Qualidade baixa = ficheiro mais pequeno, Qualidade alta = melhor fidelidade visual",
       howItWorks: "Como Funciona",
       howItWorksItems: [
         { title: "Carregar:", text: "seleciona o teu PDF ou arrasta e larga." },
+        { title: "Ajustar Qualidade:", text: "usa o deslizador para equilibrar compressão vs qualidade." },
         { title: "Comprimir:", text: "metadados são removidos, imagens são redimensionadas e recodificadas, com recurso automático a rasterização." },
         { title: "Descarregar:", text: "obtém o PDF mais pequeno instantaneamente." },
         { title: "Privacidade:", text: "todo o processamento ocorre no navegador; nada sai do cliente." },
@@ -404,6 +421,7 @@ function App() {
       features: "Funcionalidades",
       featuresItems: [
         "Processamento rápido e local",
+        "Qualidade de compressão ajustável",
         "Remoção de metadados e compressão de objectos",
         "Optimização inteligente de imagens (redimensionamento, qualidade JPEG)",
         "Recurso automático a rasterização para PDFs difíceis",
@@ -447,6 +465,7 @@ function App() {
 
   const [error, setError] = useState(null);
   const [warning, setWarning] = useState(null);
+  const [quality, setQuality] = useState(60); // Quality slider (0-100)
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -488,7 +507,7 @@ function App() {
         setProgressMessage(msg);
       };
 
-      const result = await compressPDFUnified(arrayBuffer, onProgress);
+      const result = await compressPDFUnified(arrayBuffer, quality, onProgress);
 
       const blob = new Blob([result.bytes], { type: "application/pdf" });
 
@@ -507,6 +526,52 @@ function App() {
         setWarning(
           `Only a ${((1 - blob.size / selectedFile.size) * 100).toFixed(1)} % size reduction. ` + `The original PDF may already be optimised.`,
         );
+      }
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to compress PDF.");
+      setCompressing(false);
+      setProgress(0);
+      setProgressMessage("");
+    }
+  };
+
+  /* ---------- Recompress with new quality ---------- */
+  const handleRecompress = async () => {
+    if (!file) return;
+
+    setError(null);
+    setWarning(null);
+    setCompressedBlob(null);
+    setCompressing(true);
+    setProgress(0);
+    setProgressMessage("Preparing…");
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+
+      const onProgress = (pct, msg) => {
+        setProgress(Math.round(pct));
+        setProgressMessage(msg);
+      };
+
+      const result = await compressPDFUnified(arrayBuffer, quality, onProgress);
+
+      const blob = new Blob([result.bytes], { type: "application/pdf" });
+
+      setCompressedBlob(blob);
+      setCompressedSize(blob.size);
+      setPageCount(result.pageCount);
+      setCompressing(false);
+
+      // ---- Warnings -------------------------------------------------
+      if (blob.size > TARGET_SIZE) {
+        setWarning(
+          `Compressed file is ${formatBytes(blob.size)} – still above the 10 MB target. ` +
+            `The PDF may contain complex graphics that cannot be reduced further without quality loss.`,
+        );
+      } else if (blob.size >= file.size * 0.95) {
+        setWarning(`Only a ${((1 - blob.size / file.size) * 100).toFixed(1)} % size reduction. ` + `The original PDF may already be optimised.`);
       }
     } catch (e) {
       console.error(e);
@@ -627,6 +692,29 @@ function App() {
               <IconUpload />
               <h3>{t.selectOrDrop}</h3>
               <p className='upload-subtitle'>{isDragging ? t.dropHere : t.subtitle}</p>
+
+              {/* Quality Slider - shown before upload */}
+              <div className='quality-control'>
+                <label htmlFor='quality-slider'>
+                  <strong>{t.qualityLabel}:</strong> {quality}%
+                </label>
+                <div className='quality-slider-container'>
+                  <span className='quality-label-left'>{t.qualityLow}</span>
+                  <input
+                    id='quality-slider'
+                    type='range'
+                    min='0'
+                    max='100'
+                    value={quality}
+                    onChange={e => setQuality(parseInt(e.target.value))}
+                    className='quality-slider'
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <span className='quality-label-right'>{t.qualityHigh}</span>
+                </div>
+                <p className='quality-description'>{t.qualityDescription}</p>
+              </div>
+
               <button
                 className='btn-primary btn-upload'
                 onClick={e => {
@@ -657,6 +745,33 @@ function App() {
                   <IconTrash />
                 </button>
               </div>
+
+              {/* ---- Quality Slider - shown after upload ---- */}
+              {!compressing && (
+                <div className='quality-control-card'>
+                  <label htmlFor='quality-slider-card'>
+                    <strong>{t.qualityLabel}:</strong> {quality}%
+                  </label>
+                  <div className='quality-slider-container'>
+                    <span className='quality-label-left'>{t.qualityLow}</span>
+                    <input
+                      id='quality-slider-card'
+                      type='range'
+                      min='0'
+                      max='100'
+                      value={quality}
+                      onChange={e => setQuality(parseInt(e.target.value))}
+                      className='quality-slider'
+                    />
+                    <span className='quality-label-right'>{t.qualityHigh}</span>
+                  </div>
+                  <p className='quality-description'>{t.qualityDescription}</p>
+                  <button className='btn-secondary btn-recompress' onClick={handleRecompress} disabled={compressing}>
+                    <IconCompress />
+                    <span>Recompress with new quality</span>
+                  </button>
+                </div>
+              )}
 
               {/* ---- Progress while compressing ---- */}
               {compressing && (
