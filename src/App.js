@@ -108,6 +108,14 @@ const IconMerge = () => (
     <rect x='14' y='14' width='7' height='7' rx='1'></rect>
   </svg>
 );
+const IconExtract = () => (
+  <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+    <path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'></path>
+    <polyline points='14 2 14 8 20 8'></polyline>
+    <line x1='9' y1='15' x2='15' y2='15'></line>
+    <line x1='12' y1='12' x2='12' y2='18'></line>
+  </svg>
+);
 const IconInfo = () => (
   <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
     <circle cx='12' cy='12' r='10'></circle>
@@ -366,6 +374,43 @@ async function mergePDFs(fileObjects, onProgress) {
   return { bytes: mergedBytes, totalPages, success: true };
 }
 
+/* --------------------------------------------------------------
+   PDF PAGE EXTRACTION FUNCTION
+   -------------------------------------------------------------- */
+async function extractPages(pdfBytes, selectedPageIndices, onProgress) {
+  onProgress(10, "Loading PDF…");
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const totalPages = pdfDoc.getPageCount();
+
+  if (selectedPageIndices.length === 0) {
+    throw new Error("No pages selected for extraction");
+  }
+
+  // Validate page indices
+  for (const pageIdx of selectedPageIndices) {
+    if (pageIdx < 0 || pageIdx >= totalPages) {
+      throw new Error(`Invalid page index: ${pageIdx + 1}. PDF has ${totalPages} pages.`);
+    }
+  }
+
+  onProgress(30, "Creating new PDF with selected pages…");
+  const newPdf = await PDFDocument.create();
+
+  onProgress(50, `Extracting ${selectedPageIndices.length} page${selectedPageIndices.length !== 1 ? "s" : ""}…`);
+
+  // Copy selected pages in order
+  const copiedPages = await newPdf.copyPages(pdfDoc, selectedPageIndices);
+  copiedPages.forEach(page => {
+    newPdf.addPage(page);
+  });
+
+  onProgress(90, "Saving extracted PDF…");
+  const extractedBytes = await newPdf.save({ useObjectStreams: true });
+  onProgress(100, "Done!");
+
+  return { bytes: extractedBytes, pageCount: selectedPageIndices.length, success: true };
+}
+
 /* ------------------- VALIDATION ------------------- */
 function validatePDF(file) {
   if (!file) return { valid: false, error: "No file selected" };
@@ -393,6 +438,7 @@ function App() {
       toolCompressor: "PDF Compressor",
       toolSplitter: "PDF Splitter",
       toolMerger: "PDF Merger",
+      toolExtractor: "Page Extractor",
       selectTool: "Select a Tool",
       selectToolDesc: "Choose the PDF tool you want to use",
 
@@ -434,6 +480,22 @@ function App() {
       filesInto: "files into",
       totalSize: "Total Size",
 
+      // Extractor
+      selectOrDropExtract: "Select or Drop PDF to Extract Pages",
+      subtitleExtract: "Choose specific pages to extract",
+      selectPages: "Select Pages",
+      selectedPages: "Selected Pages",
+      noPages: "No pages selected",
+      clickPages: "Click on pages to select/deselect them",
+      extractPages: "Extract Pages",
+      clearSelection: "Clear Selection",
+      selectAll: "Select All",
+      extractAnother: "Extract From Another File",
+      extractSuccessful: "Extraction Successful!",
+      extractComplete: "Extraction Complete",
+      extracted: "Extracted",
+      pagesExtracted: "pages",
+
       // Common
       originalSize: "Original size",
       pages: "pages",
@@ -473,6 +535,7 @@ function App() {
       toolCompressor: "Compressor de PDF",
       toolSplitter: "Divisor de PDF",
       toolMerger: "Unir PDFs",
+      toolExtractor: "Extrator de Páginas",
       selectTool: "Seleciona uma Ferramenta",
       selectToolDesc: "Escolhe a ferramenta de PDF que queres usar",
 
@@ -513,6 +576,22 @@ function App() {
       merged: "Uniu",
       filesInto: "ficheiros em",
       totalSize: "Tamanho Total",
+
+      // Extractor
+      selectOrDropExtract: "Seleciona ou Arrasta PDF para Extrair Páginas",
+      subtitleExtract: "Escolhe páginas específicas para extrair",
+      selectPages: "Selecionar Páginas",
+      selectedPages: "Páginas Selecionadas",
+      noPages: "Nenhuma página selecionada",
+      clickPages: "Clica nas páginas para selecionar/desselecionar",
+      extractPages: "Extrair Páginas",
+      clearSelection: "Limpar Seleção",
+      selectAll: "Selecionar Todas",
+      extractAnother: "Extrair de Outro Ficheiro",
+      extractSuccessful: "Extração Bem-Sucedida!",
+      extractComplete: "Extração Concluída",
+      extracted: "Extraiu",
+      pagesExtracted: "páginas",
 
       // Common
       originalSize: "Tamanho original",
@@ -591,6 +670,14 @@ function App() {
   const [mergeFiles, setMergeFiles] = useState([]);
   const [mergedBlob, setMergedBlob] = useState(null);
   const [mergedSize, setMergedSize] = useState(0);
+
+  // Extractor specific
+  const [extractFile, setExtractFile] = useState(null);
+  const [pdfPages, setPdfPages] = useState([]);
+  const [selectedPages, setSelectedPages] = useState(new Set());
+  const [extractedBlob, setExtractedBlob] = useState(null);
+  const [extractedSize, setExtractedSize] = useState(0);
+  const [loadingPages, setLoadingPages] = useState(false);
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -705,6 +792,8 @@ function App() {
       handleCompressFile(selectedFile);
     } else if (selectedTool === "splitter") {
       handleSplitFile(selectedFile);
+    } else if (selectedTool === "extractor") {
+      handleExtractFile(selectedFile);
     }
   };
 
@@ -811,6 +900,138 @@ function App() {
     }
   };
 
+  /* ---------- File handling - EXTRACTOR ---------- */
+  const handleExtractFile = async selectedFile => {
+    const validation = validatePDF(selectedFile);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+
+    setExtractFile(selectedFile);
+    setError(null);
+    setWarning(null);
+    setExtractedBlob(null);
+    setSelectedPages(new Set());
+    setOriginalSize(selectedFile.size);
+    setLoadingPages(true);
+
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
+
+      // Load PDF with pdf.js for rendering
+      const uint8 = new Uint8Array(arrayBuffer);
+      const loadingTask = pdfjsLib.getDocument({ data: uint8, disableAutoFetch: true });
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+      setPageCount(numPages);
+
+      // Render all pages as thumbnails
+      const pages = [];
+      const SCALE = 0.3; // Small scale for thumbnails
+
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: SCALE });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        canvas.remove();
+
+        pages.push({
+          pageNumber: pageNum,
+          thumbnail: dataUrl,
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+
+      setPdfPages(pages);
+      setLoadingPages(false);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to load PDF.");
+      setLoadingPages(false);
+    }
+  };
+
+  const togglePageSelection = pageNumber => {
+    setSelectedPages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pageNumber)) {
+        newSet.delete(pageNumber);
+      } else {
+        newSet.add(pageNumber);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllPages = () => {
+    if (selectedPages.size === pageCount) {
+      setSelectedPages(new Set());
+    } else {
+      setSelectedPages(new Set(Array.from({ length: pageCount }, (_, i) => i + 1)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedPages(new Set());
+  };
+
+  const handleStartExtraction = async () => {
+    if (selectedPages.size === 0) {
+      setError("Please select at least one page to extract");
+      return;
+    }
+
+    if (!extractFile) {
+      setError("No file loaded");
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+    setExtractedBlob(null);
+    setProcessing(true);
+    setProgress(0);
+    setProgressMessage("Preparing…");
+
+    try {
+      const arrayBuffer = await extractFile.arrayBuffer();
+
+      const onProgress = (pct, msg) => {
+        setProgress(Math.round(pct));
+        setProgressMessage(msg);
+      };
+
+      // Convert page numbers to 0-based indices and sort them
+      const pageIndices = Array.from(selectedPages)
+        .sort((a, b) => a - b)
+        .map(p => p - 1);
+
+      const result = await extractPages(arrayBuffer, pageIndices, onProgress);
+
+      const blob = new Blob([result.bytes], { type: "application/pdf" });
+
+      setExtractedBlob(blob);
+      setExtractedSize(blob.size);
+      setProcessing(false);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to extract pages.");
+      setProcessing(false);
+      setProgress(0);
+      setProgressMessage("");
+    }
+  };
+
   /* ---------- Download - MERGER ---------- */
   const handleDownloadMerged = () => {
     if (!mergedBlob) return;
@@ -874,6 +1095,28 @@ function App() {
     });
   };
 
+  /* ---------- Download - EXTRACTOR ---------- */
+  const handleDownloadExtracted = () => {
+    if (!extractedBlob || !extractFile) return;
+    try {
+      const url = URL.createObjectURL(extractedBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      const name = extractFile.name.replace(/\.pdf$/i, "");
+      const pagesList = Array.from(selectedPages)
+        .sort((a, b) => a - b)
+        .join("_");
+      a.download = `${name}_pages_${pagesList}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to download file. Please try again.");
+    }
+  };
+
   /* ---------- Reset ---------- */
   const handleReset = () => {
     setFile(null);
@@ -886,6 +1129,12 @@ function App() {
     setMergeFiles([]);
     setMergedBlob(null);
     setMergedSize(0);
+    setExtractFile(null);
+    setPdfPages([]);
+    setSelectedPages(new Set());
+    setExtractedBlob(null);
+    setExtractedSize(0);
+    setLoadingPages(false);
     setWarning(null);
     setProgress(0);
     setProgressMessage("");
@@ -986,6 +1235,10 @@ function App() {
                 <button className='tool-button' onClick={() => setSelectedTool("merger")}>
                   <IconMerge />
                   <span>{t.toolMerger}</span>
+                </button>
+                <button className='tool-button' onClick={() => setSelectedTool("extractor")}>
+                  <IconExtract />
+                  <span>{t.toolExtractor}</span>
                 </button>
               </div>
             </div>
@@ -1270,6 +1523,198 @@ function App() {
                   <button className='btn-action btn-secondary' onClick={handleBackToTools}>
                     <IconMerge />
                     <span>{t.mergeAnother}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==== EXTRACTOR Tool ==== */}
+          {selectedTool === "extractor" && !extractFile && (
+            <div
+              className={`upload-area ${isDragging ? "dragging" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <input ref={fileInputRef} type='file' accept='.pdf,application/pdf' hidden onChange={e => handleFileSelect(e.target.files?.[0])} />
+              <IconUpload />
+              <h3>{t.selectOrDropExtract}</h3>
+              <p className='upload-subtitle'>{isDragging ? t.dropHere : t.subtitleExtract}</p>
+
+              <button
+                className='btn-primary btn-upload'
+                onClick={e => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                {t.chooseFile}
+              </button>
+
+              <button
+                className='btn-secondary btn-back'
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedTool(null);
+                }}
+              >
+                {t.backToTools}
+              </button>
+            </div>
+          )}
+
+          {/* ==== EXTRACTOR Page Selection ==== */}
+          {selectedTool === "extractor" && extractFile && !extractedBlob && (
+            <div className='card compression-card'>
+              <div className='file-info'>
+                <IconFile />
+                <div className='file-details'>
+                  <h3>{extractFile.name}</h3>
+                  <p>
+                    {t.originalSize}: {formatBytes(originalSize)}
+                  </p>
+                  {pageCount > 0 && (
+                    <p className='page-count'>
+                      {pageCount} {pageCount !== 1 ? t.pages : t.page}
+                    </p>
+                  )}
+                </div>
+                <button className='btn-icon btn-danger' onClick={handleBackToTools} title={t.removeFile} disabled={processing || loadingPages}>
+                  <IconTrash />
+                </button>
+              </div>
+
+              {loadingPages && (
+                <div className='progress-section'>
+                  <div className='progress-info'>
+                    <p className='progress-text'>Loading pages...</p>
+                  </div>
+                </div>
+              )}
+
+              {!loadingPages && pdfPages.length > 0 && (
+                <>
+                  <div className='extractor-header'>
+                    <h4>{t.selectPages}</h4>
+                    <p className='extractor-subtitle'>{t.clickPages}</p>
+                    <div className='extractor-stats'>
+                      <span className='selected-count'>
+                        {t.selectedPages}: <strong>{selectedPages.size}</strong> / {pageCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className='extractor-controls'>
+                    <button className='btn-secondary btn-small' onClick={handleSelectAllPages} disabled={processing}>
+                      {selectedPages.size === pageCount ? t.clearSelection : t.selectAll}
+                    </button>
+                    {selectedPages.size > 0 && (
+                      <button className='btn-secondary btn-small' onClick={handleClearSelection} disabled={processing}>
+                        {t.clearSelection}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className='pdf-page-grid'>
+                    {pdfPages.map(page => (
+                      <div
+                        key={page.pageNumber}
+                        className={`pdf-page-thumbnail ${selectedPages.has(page.pageNumber) ? "selected" : ""}`}
+                        onClick={() => !processing && togglePageSelection(page.pageNumber)}
+                      >
+                        <div className='page-number'>{page.pageNumber}</div>
+                        <img src={page.thumbnail} alt={`Page ${page.pageNumber}`} />
+                        {selectedPages.has(page.pageNumber) && (
+                          <div className='page-check'>
+                            <IconCheck />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {processing && (
+                    <div className='progress-section'>
+                      <div className='progress-bar'>
+                        <div className='progress-fill' style={{ width: `${progress}%` }}></div>
+                      </div>
+                      <div className='progress-info'>
+                        <p className='progress-text'>{progressMessage}</p>
+                        <p className='progress-percent'>{progress}%</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className='error-message'>
+                      <IconAlert />
+                      <div>
+                        <strong>{t.error}</strong>
+                        <p>{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!processing && (
+                    <div className='action-buttons'>
+                      <button className='btn-primary' onClick={handleStartExtraction} disabled={selectedPages.size === 0}>
+                        <IconExtract />
+                        <span>
+                          {t.extractPages} ({selectedPages.size})
+                        </span>
+                      </button>
+                      <button className='btn-secondary' onClick={handleBackToTools}>
+                        {t.backToTools}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ==== EXTRACTOR Result ==== */}
+          {selectedTool === "extractor" && extractedBlob && !processing && !error && (
+            <div className='card compression-card'>
+              <div className='result-section'>
+                <div className='success-banner target-met'>
+                  <IconCheck />
+                  <div>
+                    <strong>{t.extractSuccessful}</strong>
+                    <p>
+                      {t.extracted} {selectedPages.size} {selectedPages.size !== 1 ? t.pagesExtracted : t.page}
+                    </p>
+                  </div>
+                </div>
+
+                <div className='result-stats'>
+                  <div className='stat-item'>
+                    <span className='stat-label'>{t.originalSizeLabel}</span>
+                    <span className='stat-value'>{formatBytes(originalSize)}</span>
+                  </div>
+
+                  <div className='stat-item'>
+                    <span className='stat-label'>Extracted Size</span>
+                    <span className='stat-value'>{formatBytes(extractedSize)}</span>
+                  </div>
+
+                  <div className='stat-item'>
+                    <span className='stat-label'>{t.pageCount}</span>
+                    <span className='stat-value'>{selectedPages.size}</span>
+                  </div>
+                </div>
+
+                <div className='action-buttons'>
+                  <button className='btn-download btn-primary' onClick={handleDownloadExtracted}>
+                    <IconDownload />
+                    <span>{t.download}</span>
+                  </button>
+                  <button className='btn-action btn-secondary' onClick={handleBackToTools}>
+                    <IconExtract />
+                    <span>{t.extractAnother}</span>
                   </button>
                 </div>
               </div>
