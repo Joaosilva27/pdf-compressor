@@ -1,0 +1,72 @@
+{
+  "name": "pdf-compressor-pro",
+  "version": "2.0.0",
+  "description": "Professional client-side PDF compression tool with privacy-first approach",
+  "private": true,
+  "homepage": ".",
+  "author": {
+    "name": "Conectys Team",
+    "url": "https://github.com/Joaosilva27"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Joaosilva27/pdf-compressor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Joaosilva27/pdf-compressor/issues"
+  },
+  "keywords": [
+    "pdf",
+    "compression",
+    "pdf-compressor",
+    "client-side",
+    "privacy",
+    "react",
+    "pdf-lib",
+    "document-processing",
+    "file-compression"
+  ],
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^3.11.174",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^3.5.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "off"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3"
+  }
+}
