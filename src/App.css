@@ -1179,3 +1179,245 @@ a:focus-visible {
     width: 100%;
   }
 }
+
+/* ===============================================
+   MULTI-TOOL SPECIFIC STYLES
+   =============================================== */
+
+/* Tool Selection Screen */
+.tool-selection {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tool-selection h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.tool-selection-desc {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+}
+
+.tool-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.tool-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 40px 30px;
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tool-button:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  background: var(--primary-color);
+  color: white;
+}
+
+.tool-button:hover .icon {
+  stroke: white;
+}
+
+.tool-button .icon {
+  width: 48px;
+  height: 48px;
+  stroke: var(--primary-color);
+  transition: all 0.3s ease;
+}
+
+.tool-button span {
+  font-size: 1.2rem;
+}
+
+/* Back to Tools Button */
+.btn-back {
+  margin-top: 20px;
+  padding: 12px 24px;
+  width: auto;
+  min-width: 200px;
+}
+
+/* Split Results */
+.split-results {
+  margin: 20px 0;
+}
+
+.split-results h4 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  color: var(--text-primary);
+}
+
+.split-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.split-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.split-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.split-info .icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.split-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.split-size {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.split-item .btn-icon {
+  flex-shrink: 0;
+}
+
+/* Split Preview */
+.split-preview {
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--secondary-bg);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.split-preview p {
+  margin: 5px 0;
+  color: var(--text-primary);
+}
+
+.split-preview strong {
+  color: var(--primary-color);
+  font-size: 1.2rem;
+}
+
+/* Dark Mode Adjustments */
+.dark .tool-button {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+.dark .tool-button:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.dark .split-item {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+.dark .split-preview {
+  background: var(--card-bg);
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .tool-selection h2 {
+    font-size: 1.5rem;
+  }
+
+  .tool-selection-desc {
+    font-size: 1rem;
+  }
+
+  .tool-buttons {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .tool-button {
+    padding: 30px 20px;
+  }
+
+  .tool-button .icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .tool-button span {
+    font-size: 1.1rem;
+  }
+
+  .split-item {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .split-info {
+    width: 100%;
+  }
+
+  .split-item .btn-icon {
+    width: 100%;
+  }
+}
+
+/* Animation for tool selection */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tool-selection {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.tool-button {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.tool-button:nth-child(2) {
+  animation-delay: 0.1s;
+}

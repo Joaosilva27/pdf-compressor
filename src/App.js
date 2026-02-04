@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import "./App.css";
 import ConectysLogo from "./conectys.png";
 import RonaldoGif from "./ronaldo.gif";
-import { PDFDocument, PDFName, PDFDict, PDFRawStream } from "pdf-lib";
+import { PDFDocument, PDFName, PDFDict } from "pdf-lib";
 
 /* ------------------- PDF‑JS IMPORT ------------------- */
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
@@ -11,7 +11,6 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 pdfjsLib.GlobalWorkerOptions.workerSrc = process.env.PUBLIC_URL ? `${process.env.PUBLIC_URL}/pdf.worker.min.js` : "/pdf.worker.min.js";
 
 /* ------------------- ICON COMPONENTS ------------------- */
-// … (your Icon components – unchanged) …
 const IconUpload = () => (
   <svg className='icon icon-large' viewBox='0 0 24 24' fill='none' stroke='currentColor'>
     <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'></path>
@@ -95,6 +94,13 @@ const IconCompress = () => (
     <line x1='3' y1='21' x2='10' y2='14'></line>
   </svg>
 );
+const IconSplit = () => (
+  <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+    <rect x='3' y='3' width='7' height='18' rx='1'></rect>
+    <rect x='14' y='3' width='7' height='7' rx='1'></rect>
+    <rect x='14' y='14' width='7' height='7' rx='1'></rect>
+  </svg>
+);
 const IconInfo = () => (
   <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
     <circle cx='12' cy='12' r='10'></circle>
@@ -122,16 +128,6 @@ function arrayBufferToBlobUrl(buf, mime) {
   return URL.createObjectURL(blob);
 }
 
-/**
- * Re‑encode an image using a hidden canvas.
- *
- * @param {Uint8Array} imgBytes   Raw bytes from the PDF (already decoded).
- * @param {boolean} isJpeg        true if the original filter is DCTDecode.
- * @param {number} maxDim         Max width/height (pixels).
- * @param {number} jpegQuality    JPEG quality (0‑1).
- *
- * @returns {Uint8Array} New JPEG bytes.
- */
 async function reEncodeImage(imgBytes, isJpeg, maxDim, jpegQuality) {
   const mimeIn = isJpeg ? "image/jpeg" : "image/png";
   const url = arrayBufferToBlobUrl(imgBytes, mimeIn);
@@ -144,7 +140,6 @@ async function reEncodeImage(imgBytes, isJpeg, maxDim, jpegQuality) {
   });
   URL.revokeObjectURL(url);
 
-  // Down‑scale if needed
   let { width, height } = img;
   if (Math.max(width, height) > maxDim) {
     const scale = maxDim / Math.max(width, height);
@@ -165,18 +160,15 @@ async function reEncodeImage(imgBytes, isJpeg, maxDim, jpegQuality) {
 }
 
 /* --------------------------------------------------------------
-   1️⃣  Fast (image‑only) compression – primary path
+   PDF COMPRESSION FUNCTIONS
    -------------------------------------------------------------- */
 async function compressPDFFast(pdfBytes, quality, onProgress) {
-  // Map quality (0-100) to max dimension and JPEG quality
-  // Lower quality = more compression = smaller dimensions & lower JPEG quality
-  const MAX_DIMENSION = Math.round(500 + (quality / 100) * 2500); // 500px to 3000px
-  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65; // 0.3 to 0.95
+  const MAX_DIMENSION = Math.round(500 + (quality / 100) * 2500);
+  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65;
 
   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const pageCount = pdfDoc.getPageCount();
 
-  // 1️⃣ Strip metadata
   onProgress(5, "Stripping metadata…");
   pdfDoc.setTitle("");
   pdfDoc.setAuthor("");
@@ -187,7 +179,6 @@ async function compressPDFFast(pdfBytes, quality, onProgress) {
   pdfDoc.setCreationDate(new Date(0));
   pdfDoc.setModificationDate(new Date(0));
 
-  // 2️⃣ Clean catalog
   onProgress(15, "Cleaning catalog…");
   const catalog = pdfDoc.catalog;
   ["Metadata", "PieceInfo", "StructTreeRoot", "SpiderInfo", "OutputIntents", "MarkInfo"].forEach(key => {
@@ -196,7 +187,6 @@ async function compressPDFFast(pdfBytes, quality, onProgress) {
     } catch (_) {}
   });
 
-  // 3️⃣ Re‑encode image XObjects
   onProgress(30, "Optimising images…");
   for (let i = 0; i < pageCount; i++) {
     const page = pdfDoc.getPage(i);
@@ -208,16 +198,16 @@ async function compressPDFFast(pdfBytes, quality, onProgress) {
 
     for (const [key, ref] of entries) {
       const obj = pdfDoc.context.lookup(ref);
-      if (!obj || typeof obj.getContents !== "function") continue; // not a stream
+      if (!obj || typeof obj.getContents !== "function") continue;
 
       const subtype = obj.dict.get(PDFName.of("Subtype"));
-      if (!subtype || subtype.toString() !== "/Image") continue; // not an image
+      if (!subtype || subtype.toString() !== "/Image") continue;
 
       const filter = obj.dict.get(PDFName.of("Filter"));
       const filterStr = filter?.toString() ?? "";
       const isJpeg = filterStr.includes("DCTDecode");
 
-      const imgBytes = obj.getContents(); // already decoded
+      const imgBytes = obj.getContents();
 
       try {
         const newBytes = await reEncodeImage(imgBytes, isJpeg, MAX_DIMENSION, JPEG_QUALITY);
@@ -228,29 +218,23 @@ async function compressPDFFast(pdfBytes, quality, onProgress) {
       }
     }
 
-    // progress: 30 % → 70 %
     onProgress(30 + ((i + 1) / pageCount) * 40, `Optimised page ${i + 1}/${pageCount}`);
   }
 
-  // 4️⃣ Save
   onProgress(85, "Saving compressed PDF…");
   const compressed = await pdfDoc.save({ useObjectStreams: true });
   onProgress(100, "Done!");
   return { bytes: compressed, pageCount, success: true };
 }
 
-/* --------------------------------------------------------------
-   2️⃣  Raster fallback – uses pdfjs to render each page
-   -------------------------------------------------------------- */
 async function compressPDFRaster(pdfBytes, quality, onProgress) {
   const uint8 = new Uint8Array(pdfBytes);
   const loadingTask = pdfjsLib.getDocument({ data: uint8, disableAutoFetch: true });
   const pdf = await loadingTask.promise;
   const pageCount = pdf.numPages;
 
-  // Map quality to scale and JPEG quality for rasterization
-  const SCALE = 0.5 + (quality / 100) * 1.5; // 0.5x to 2x scale
-  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65; // 0.3 to 0.95
+  const SCALE = 0.5 + (quality / 100) * 1.5;
+  const JPEG_QUALITY = 0.3 + (quality / 100) * 0.65;
 
   async function rasterisePage(pageNumber) {
     const page = await pdf.getPage(pageNumber);
@@ -285,9 +269,6 @@ async function compressPDFRaster(pdfBytes, quality, onProgress) {
   return { bytes: out, pageCount, success: true };
 }
 
-/* --------------------------------------------------------------
-   Unified entry point – try fast, fall back to raster
-   -------------------------------------------------------------- */
 async function compressPDFUnified(pdfBytes, quality, onProgress) {
   try {
     return await compressPDFFast(pdfBytes, quality, onProgress);
@@ -300,6 +281,51 @@ async function compressPDFUnified(pdfBytes, quality, onProgress) {
       throw new Error(`Both compression methods failed – ${rasterErr instanceof Error ? rasterErr.message : rasterErr}`);
     }
   }
+}
+
+/* --------------------------------------------------------------
+   PDF SPLITTING FUNCTION
+   -------------------------------------------------------------- */
+async function splitPDF(pdfBytes, pagesPerSplit, onProgress) {
+  onProgress(10, "Loading PDF…");
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const totalPages = pdfDoc.getPageCount();
+
+  if (pagesPerSplit <= 0 || pagesPerSplit > totalPages) {
+    throw new Error(`Invalid pages per split. Must be between 1 and ${totalPages}`);
+  }
+
+  const numSplits = Math.ceil(totalPages / pagesPerSplit);
+  const splitPdfs = [];
+
+  onProgress(20, `Splitting into ${numSplits} PDF${numSplits > 1 ? "s" : ""}…`);
+
+  for (let i = 0; i < numSplits; i++) {
+    const newPdf = await PDFDocument.create();
+    const startPage = i * pagesPerSplit;
+    const endPage = Math.min(startPage + pagesPerSplit, totalPages);
+
+    onProgress(20 + (i / numSplits) * 70, `Creating split ${i + 1}/${numSplits}…`);
+
+    // Copy pages to new PDF
+    const pageIndices = Array.from({ length: endPage - startPage }, (_, idx) => startPage + idx);
+    const copiedPages = await newPdf.copyPages(pdfDoc, pageIndices);
+
+    copiedPages.forEach(page => {
+      newPdf.addPage(page);
+    });
+
+    const pdfBytes = await newPdf.save();
+    splitPdfs.push({
+      bytes: pdfBytes,
+      startPage: startPage + 1,
+      endPage: endPage,
+      name: `split_${i + 1}_pages_${startPage + 1}-${endPage}`,
+    });
+  }
+
+  onProgress(100, "Done!");
+  return { splits: splitPdfs, totalPages, numSplits };
 }
 
 /* ------------------- VALIDATION ------------------- */
@@ -325,19 +351,49 @@ function App() {
 
   const translations = {
     en: {
-      brand: "PDF Compressor",
+      brand: "PDF Multi-Tool",
+      toolCompressor: "PDF Compressor",
+      toolSplitter: "PDF Splitter",
+      selectTool: "Select a Tool",
+      selectToolDesc: "Choose the PDF tool you want to use",
+
+      // Compressor
       selectOrDrop: "Select or Drop PDF to Compress",
       dropHere: "Drop your PDF here",
       subtitle: "Fast, secure, client‑side compression",
       chooseFile: "Choose File",
+      qualityLabel: "Compression Quality",
+      qualityLow: "Max Compression",
+      qualityHigh: "Max Quality",
+      qualityDescription: "Lower quality = smaller file size, Higher quality = better visual fidelity",
+
+      // Splitter
+      selectOrDropSplit: "Select or Drop PDF to Split",
+      subtitleSplit: "Split your PDF into multiple files",
+      pagesPerSplit: "Pages per Split",
+      pagesPerSplitDesc: "How many pages in each split PDF",
+      splitPreview: "Split Preview",
+      willCreate: "Will create",
+      pdfs: "PDFs",
+      pdf: "PDF",
+
+      // Common
       originalSize: "Original size",
       pages: "pages",
       page: "page",
       removeFile: "Remove file",
       error: "Error",
       note: "Note",
+      processing: "Processing",
+      download: "Download",
+      downloadAll: "Download All",
+      backToTools: "Back to Tools",
+
+      // Results
       compressionSuccessful: "Compression Successful!",
       compressionComplete: "Compression Complete",
+      splitSuccessful: "Split Successful!",
+      splitComplete: "Split Complete",
       reducedBy: "Reduced by",
       originalSizeLabel: "Original Size",
       compressedSize: "Compressed Size",
@@ -347,54 +403,56 @@ function App() {
       met: "✓ Met",
       exceeded: "⚠ Exceeded",
       pageCount: "Page Count",
-      download: "Download Compressed PDF",
       compressAnother: "Compress Another File",
-      qualityLabel: "Compression Quality",
-      qualityLow: "Max Compression",
-      qualityHigh: "Max Quality",
-      qualityDescription: "Lower quality = smaller file size, Higher quality = better visual fidelity",
-      howItWorks: "How It Works",
-      howItWorksItems: [
-        { title: "Upload:", text: "select your PDF or drag & drop." },
-        { title: "Adjust Quality:", text: "use the slider to balance compression vs quality." },
-        { title: "Compress:", text: "metadata is stripped, images are down‑scaled & re‑encoded, with an automatic raster fallback." },
-        { title: "Download:", text: "get the smaller PDF instantly." },
-        { title: "Privacy:", text: "all processing happens in the browser; nothing leaves the client." },
-      ],
-      features: "Features",
-      featuresItems: [
-        "Fast, client‑side processing",
-        "Adjustable compression quality",
-        "Metadata stripping & object‑stream compression",
-        "Smart image optimisation (down‑scale, JPEG quality)",
-        "Automatic raster fallback for stubborn PDFs",
-        "Free, open‑source, no‑tracking",
-        "Works offline",
-      ],
-      bestResults: "Best Results",
-      bestResultsItems: [
-        { title: "Works best on:", text: "PDFs that contain uncompressed raster images or duplicated objects." },
-        { title: "Limited on:", text: "PDFs already optimised or vector‑only documents." },
-        { title: "Maximum size:", text: "500 MB (browser memory limit)." },
-        { title: "Supported formats:", text: "Standard PDF (encrypted PDFs may not work)." },
-      ],
-      footer: "© 2026 PDF Compressor. Free & Open Source.",
+      splitAnother: "Split Another File",
+
+      footer: "© 2026 PDF Multi-Tool. Free & Open Source.",
       githubText: "View on GitHub",
     },
     pt: {
-      brand: "Compressor de PDF",
+      brand: "PDF Multi-Ferramenta",
+      toolCompressor: "Compressor de PDF",
+      toolSplitter: "Divisor de PDF",
+      selectTool: "Seleciona uma Ferramenta",
+      selectToolDesc: "Escolhe a ferramenta de PDF que queres usar",
+
+      // Compressor
       selectOrDrop: "Seleciona ou Arrasta o PDF para Comprimir",
       dropHere: "Larga o teu PDF aqui",
       subtitle: "Compressão rápida, segura e local",
       chooseFile: "Escolher Ficheiro",
+      qualityLabel: "Qualidade de Compressão",
+      qualityLow: "Compressão Máxima",
+      qualityHigh: "Qualidade Máxima",
+      qualityDescription: "Qualidade baixa = ficheiro mais pequeno, Qualidade alta = melhor fidelidade visual",
+
+      // Splitter
+      selectOrDropSplit: "Seleciona ou Arrasta o PDF para Dividir",
+      subtitleSplit: "Divide o teu PDF em múltiplos ficheiros",
+      pagesPerSplit: "Páginas por Divisão",
+      pagesPerSplitDesc: "Quantas páginas em cada PDF dividido",
+      splitPreview: "Pré-visualização da Divisão",
+      willCreate: "Vai criar",
+      pdfs: "PDFs",
+      pdf: "PDF",
+
+      // Common
       originalSize: "Tamanho original",
       pages: "páginas",
       page: "página",
       removeFile: "Remover ficheiro",
       error: "Erro",
       note: "Nota",
+      processing: "A processar",
+      download: "Descarregar",
+      downloadAll: "Descarregar Todos",
+      backToTools: "Voltar às Ferramentas",
+
+      // Results
       compressionSuccessful: "Compressão Bem-Sucedida!",
       compressionComplete: "Compressão Concluída",
+      splitSuccessful: "Divisão Bem-Sucedida!",
+      splitComplete: "Divisão Concluída",
       reducedBy: "Reduzido em",
       originalSizeLabel: "Tamanho Original",
       compressedSize: "Tamanho Comprimido",
@@ -404,38 +462,10 @@ function App() {
       met: "✓ Atingida",
       exceeded: "⚠ Excedida",
       pageCount: "Número de Páginas",
-      download: "Descarregar PDF Comprimido",
       compressAnother: "Comprimir Outro Ficheiro",
-      qualityLabel: "Qualidade de Compressão",
-      qualityLow: "Compressão Máxima",
-      qualityHigh: "Qualidade Máxima",
-      qualityDescription: "Qualidade baixa = ficheiro mais pequeno, Qualidade alta = melhor fidelidade visual",
-      howItWorks: "Como Funciona",
-      howItWorksItems: [
-        { title: "Carregar:", text: "seleciona o teu PDF ou arrasta e larga." },
-        { title: "Ajustar Qualidade:", text: "usa o deslizador para equilibrar compressão vs qualidade." },
-        { title: "Comprimir:", text: "metadados são removidos, imagens são redimensionadas e recodificadas, com recurso automático a rasterização." },
-        { title: "Descarregar:", text: "obtém o PDF mais pequeno instantaneamente." },
-        { title: "Privacidade:", text: "todo o processamento ocorre no navegador; nada sai do cliente." },
-      ],
-      features: "Funcionalidades",
-      featuresItems: [
-        "Processamento rápido e local",
-        "Qualidade de compressão ajustável",
-        "Remoção de metadados e compressão de objectos",
-        "Optimização inteligente de imagens (redimensionamento, qualidade JPEG)",
-        "Recurso automático a rasterização para PDFs difíceis",
-        "Gratuito, código aberto, sem rastreamento",
-        "Funciona offline",
-      ],
-      bestResults: "Melhores Resultados",
-      bestResultsItems: [
-        { title: "Funciona melhor em:", text: "PDFs que contêm imagens raster não comprimidas ou objectos duplicados." },
-        { title: "Limitado em:", text: "PDFs já optimizados ou documentos apenas vectoriais." },
-        { title: "Tamanho máximo:", text: "500 MB (limite de memória do navegador)." },
-        { title: "Formatos suportados:", text: "PDF padrão (PDFs encriptados podem não funcionar)." },
-      ],
-      footer: "© 2026 Compressor de PDF. Gratuito e Código Aberto.",
+      splitAnother: "Dividir Outro Ficheiro",
+
+      footer: "© 2026 PDF Multi-Ferramenta. Gratuito e Código Aberto.",
       githubText: "Ver no GitHub",
     },
   };
@@ -447,25 +477,35 @@ function App() {
     const saved = localStorage.getItem("theme");
     return saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
   });
+
   React.useEffect(() => {
     localStorage.setItem("theme", darkMode ? "dark" : "light");
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  /* ---------- Tool Selection ---------- */
+  const [selectedTool, setSelectedTool] = useState(null); // 'compressor' or 'splitter'
+
   /* ---------- State ---------- */
   const [file, setFile] = useState(null);
-  const [compressing, setCompressing] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
 
   const [originalSize, setOriginalSize] = useState(0);
-  const [compressedSize, setCompressedSize] = useState(0);
-  const [compressedBlob, setCompressedBlob] = useState(null);
   const [pageCount, setPageCount] = useState(0);
 
   const [error, setError] = useState(null);
   const [warning, setWarning] = useState(null);
-  const [quality, setQuality] = useState(60); // Quality slider (0-100)
+
+  // Compressor specific
+  const [quality, setQuality] = useState(60);
+  const [compressedSize, setCompressedSize] = useState(0);
+  const [compressedBlob, setCompressedBlob] = useState(null);
+
+  // Splitter specific
+  const [pagesPerSplit, setPagesPerSplit] = useState(5);
+  const [splitResults, setSplitResults] = useState(null);
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -482,8 +522,8 @@ function App() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
   }, []);
 
-  /* ---------- File handling ---------- */
-  const handleFileSelect = async selectedFile => {
+  /* ---------- File handling - COMPRESSOR ---------- */
+  const handleCompressFile = async selectedFile => {
     const validation = validatePDF(selectedFile);
     if (!validation.valid) {
       setError(validation.error);
@@ -495,7 +535,7 @@ function App() {
     setWarning(null);
     setCompressedBlob(null);
     setOriginalSize(selectedFile.size);
-    setCompressing(true);
+    setProcessing(true);
     setProgress(0);
     setProgressMessage("Preparing…");
 
@@ -514,9 +554,8 @@ function App() {
       setCompressedBlob(blob);
       setCompressedSize(blob.size);
       setPageCount(result.pageCount);
-      setCompressing(false);
+      setProcessing(false);
 
-      // ---- Warnings -------------------------------------------------
       if (blob.size > TARGET_SIZE) {
         setWarning(
           `Compressed file is ${formatBytes(blob.size)} – still above the 10 MB target. ` +
@@ -530,60 +569,74 @@ function App() {
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Failed to compress PDF.");
-      setCompressing(false);
+      setProcessing(false);
       setProgress(0);
       setProgressMessage("");
     }
   };
 
-  /* ---------- Recompress with new quality ---------- */
-  const handleRecompress = async () => {
-    if (!file) return;
+  /* ---------- File handling - SPLITTER ---------- */
+  const handleSplitFile = async selectedFile => {
+    const validation = validatePDF(selectedFile);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
 
+    setFile(selectedFile);
     setError(null);
     setWarning(null);
-    setCompressedBlob(null);
-    setCompressing(true);
+    setSplitResults(null);
+    setOriginalSize(selectedFile.size);
+    setProcessing(true);
     setProgress(0);
     setProgressMessage("Preparing…");
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
+      const arrayBuffer = await selectedFile.arrayBuffer();
 
       const onProgress = (pct, msg) => {
         setProgress(Math.round(pct));
         setProgressMessage(msg);
       };
 
-      const result = await compressPDFUnified(arrayBuffer, quality, onProgress);
+      const result = await splitPDF(arrayBuffer, pagesPerSplit, onProgress);
 
-      const blob = new Blob([result.bytes], { type: "application/pdf" });
-
-      setCompressedBlob(blob);
-      setCompressedSize(blob.size);
-      setPageCount(result.pageCount);
-      setCompressing(false);
-
-      // ---- Warnings -------------------------------------------------
-      if (blob.size > TARGET_SIZE) {
-        setWarning(
-          `Compressed file is ${formatBytes(blob.size)} – still above the 10 MB target. ` +
-            `The PDF may contain complex graphics that cannot be reduced further without quality loss.`,
-        );
-      } else if (blob.size >= file.size * 0.95) {
-        setWarning(`Only a ${((1 - blob.size / file.size) * 100).toFixed(1)} % size reduction. ` + `The original PDF may already be optimised.`);
-      }
+      setSplitResults(result);
+      setPageCount(result.totalPages);
+      setProcessing(false);
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "Failed to compress PDF.");
-      setCompressing(false);
+      setError(e instanceof Error ? e.message : "Failed to split PDF.");
+      setProcessing(false);
       setProgress(0);
       setProgressMessage("");
     }
   };
 
-  /* ---------- Download ---------- */
-  const handleDownload = () => {
+  /* ---------- Handle file selection based on tool ---------- */
+  const handleFileSelect = selectedFile => {
+    if (selectedTool === "compressor") {
+      handleCompressFile(selectedFile);
+    } else if (selectedTool === "splitter") {
+      handleSplitFile(selectedFile);
+    }
+  };
+
+  /* ---------- Recompress with new quality ---------- */
+  const handleRecompress = async () => {
+    if (!file) return;
+    handleCompressFile(file);
+  };
+
+  /* ---------- Re-split with new pages per split ---------- */
+  const handleResplit = async () => {
+    if (!file) return;
+    handleSplitFile(file);
+  };
+
+  /* ---------- Download - COMPRESSOR ---------- */
+  const handleDownloadCompressed = () => {
     if (!compressedBlob || !file) return;
     try {
       const url = URL.createObjectURL(compressedBlob);
@@ -601,10 +654,37 @@ function App() {
     }
   };
 
+  /* ---------- Download - SPLITTER ---------- */
+  const handleDownloadSplit = splitData => {
+    try {
+      const blob = new Blob([splitData.bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const baseName = file.name.replace(/\.pdf$/i, "");
+      a.download = `${baseName}_${splitData.name}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to download file. Please try again.");
+    }
+  };
+
+  const handleDownloadAllSplits = () => {
+    if (!splitResults) return;
+    splitResults.splits.forEach(split => {
+      setTimeout(() => handleDownloadSplit(split), 100);
+    });
+  };
+
   /* ---------- Reset ---------- */
   const handleReset = () => {
     setFile(null);
     setCompressedBlob(null);
+    setSplitResults(null);
     setOriginalSize(0);
     setCompressedSize(0);
     setPageCount(0);
@@ -613,6 +693,11 @@ function App() {
     setProgress(0);
     setProgressMessage("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleBackToTools = () => {
+    handleReset();
+    setSelectedTool(null);
   };
 
   /* ---------- Drag & Drop ---------- */
@@ -642,9 +727,11 @@ function App() {
   };
 
   /* ---------- Statistics ---------- */
-  const compressionRatio = originalSize ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : 0;
+  const compressionRatio = originalSize && compressedSize ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : 0;
   const savedBytes = originalSize - compressedSize;
   const metTarget = compressedSize <= TARGET_SIZE;
+
+  const numSplits = pageCount ? Math.ceil(pageCount / pagesPerSplit) : 0;
 
   /*===================== RENDER =====================*/
   return (
@@ -678,8 +765,26 @@ function App() {
       {/* ---------- Main content ---------- */}
       <main className='main-content'>
         <div className='compress-container'>
-          {/* ==== Upload UI ==== */}
-          {!file ? (
+          {/* ==== Tool Selection ==== */}
+          {!selectedTool && !file && (
+            <div className='tool-selection'>
+              <h2>{t.selectTool}</h2>
+              <p className='tool-selection-desc'>{t.selectToolDesc}</p>
+              <div className='tool-buttons'>
+                <button className='tool-button' onClick={() => setSelectedTool("compressor")}>
+                  <IconCompress />
+                  <span>{t.toolCompressor}</span>
+                </button>
+                <button className='tool-button' onClick={() => setSelectedTool("splitter")}>
+                  <IconSplit />
+                  <span>{t.toolSplitter}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ==== COMPRESSOR Tool ==== */}
+          {selectedTool === "compressor" && !file && (
             <div
               className={`upload-area ${isDragging ? "dragging" : ""}`}
               onClick={() => fileInputRef.current?.click()}
@@ -693,7 +798,6 @@ function App() {
               <h3>{t.selectOrDrop}</h3>
               <p className='upload-subtitle'>{isDragging ? t.dropHere : t.subtitle}</p>
 
-              {/* Quality Slider - shown before upload */}
               <div className='quality-control'>
                 <label htmlFor='quality-slider'>
                   <strong>{t.qualityLabel}:</strong> {quality}%
@@ -724,8 +828,79 @@ function App() {
               >
                 {t.chooseFile}
               </button>
+
+              <button
+                className='btn-secondary btn-back'
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedTool(null);
+                }}
+              >
+                {t.backToTools}
+              </button>
             </div>
-          ) : (
+          )}
+
+          {/* ==== SPLITTER Tool ==== */}
+          {selectedTool === "splitter" && !file && (
+            <div
+              className={`upload-area ${isDragging ? "dragging" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <input ref={fileInputRef} type='file' accept='.pdf,application/pdf' hidden onChange={e => handleFileSelect(e.target.files?.[0])} />
+              <IconUpload />
+              <h3>{t.selectOrDropSplit}</h3>
+              <p className='upload-subtitle'>{isDragging ? t.dropHere : t.subtitleSplit}</p>
+
+              <div className='quality-control'>
+                <label htmlFor='pages-per-split'>
+                  <strong>{t.pagesPerSplit}:</strong> {pagesPerSplit}
+                </label>
+                <div className='quality-slider-container'>
+                  <span className='quality-label-left'>1</span>
+                  <input
+                    id='pages-per-split'
+                    type='range'
+                    min='1'
+                    max='50'
+                    value={pagesPerSplit}
+                    onChange={e => setPagesPerSplit(parseInt(e.target.value))}
+                    className='quality-slider'
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <span className='quality-label-right'>50</span>
+                </div>
+                <p className='quality-description'>{t.pagesPerSplitDesc}</p>
+              </div>
+
+              <button
+                className='btn-primary btn-upload'
+                onClick={e => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                {t.chooseFile}
+              </button>
+
+              <button
+                className='btn-secondary btn-back'
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedTool(null);
+                }}
+              >
+                {t.backToTools}
+              </button>
+            </div>
+          )}
+
+          {/* ==== Processing Card ==== */}
+          {file && (
             <div className='card compression-card'>
               {/* ---- File header ---- */}
               <div className='file-info'>
@@ -741,13 +916,13 @@ function App() {
                     </p>
                   )}
                 </div>
-                <button className='btn-icon btn-danger' onClick={handleReset} title={t.removeFile} disabled={compressing}>
+                <button className='btn-icon btn-danger' onClick={handleBackToTools} title={t.removeFile} disabled={processing}>
                   <IconTrash />
                 </button>
               </div>
 
-              {/* ---- Quality Slider - shown after upload ---- */}
-              {!compressing && (
+              {/* ---- Quality/Pages Slider for COMPRESSOR ---- */}
+              {selectedTool === "compressor" && !processing && (
                 <div className='quality-control-card'>
                   <label htmlFor='quality-slider-card'>
                     <strong>{t.qualityLabel}:</strong> {quality}%
@@ -766,15 +941,54 @@ function App() {
                     <span className='quality-label-right'>{t.qualityHigh}</span>
                   </div>
                   <p className='quality-description'>{t.qualityDescription}</p>
-                  <button className='btn-secondary btn-recompress' onClick={handleRecompress} disabled={compressing}>
+                  <button className='btn-secondary btn-recompress' onClick={handleRecompress} disabled={processing}>
                     <IconCompress />
                     <span>Recompress with new quality</span>
                   </button>
                 </div>
               )}
 
-              {/* ---- Progress while compressing ---- */}
-              {compressing && (
+              {/* ---- Pages per Split for SPLITTER ---- */}
+              {selectedTool === "splitter" && !processing && (
+                <div className='quality-control-card'>
+                  <label htmlFor='pages-per-split-card'>
+                    <strong>{t.pagesPerSplit}:</strong> {pagesPerSplit}
+                  </label>
+                  <div className='quality-slider-container'>
+                    <span className='quality-label-left'>1</span>
+                    <input
+                      id='pages-per-split-card'
+                      type='range'
+                      min='1'
+                      max={pageCount || 50}
+                      value={pagesPerSplit}
+                      onChange={e => setPagesPerSplit(parseInt(e.target.value))}
+                      className='quality-slider'
+                    />
+                    <span className='quality-label-right'>{pageCount || 50}</span>
+                  </div>
+                  <p className='quality-description'>{t.pagesPerSplitDesc}</p>
+
+                  {pageCount > 0 && (
+                    <div className='split-preview'>
+                      <p>
+                        <strong>{t.splitPreview}:</strong>
+                      </p>
+                      <p>
+                        {t.willCreate} <strong>{numSplits}</strong> {numSplits !== 1 ? t.pdfs : t.pdf}
+                      </p>
+                    </div>
+                  )}
+
+                  <button className='btn-secondary btn-recompress' onClick={handleResplit} disabled={processing}>
+                    <IconSplit />
+                    <span>Re-split with new page count</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ---- Progress while processing ---- */}
+              {processing && (
                 <div className='progress-section'>
                   <div className='progress-bar'>
                     <div className='progress-fill' style={{ width: `${progress}%` }}></div>
@@ -808,8 +1022,8 @@ function App() {
                 </div>
               )}
 
-              {/* ---- Result (after success) ---- */}
-              {compressedBlob && !compressing && !error && (
+              {/* ---- COMPRESSOR Result ---- */}
+              {selectedTool === "compressor" && compressedBlob && !processing && !error && (
                 <div className='result-section'>
                   <div className={`success-banner ${metTarget ? "target-met" : ""}`}>
                     {metTarget ? <IconCheck /> : <IconInfo />}
@@ -821,7 +1035,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Ronaldo SIUUU GIF for Portuguese speakers when target is met */}
                   {metTarget && language === "pt" && (
                     <div style={{ textAlign: "center", margin: "20px 0" }}>
                       <img src={RonaldoGif} alt='Cristiano Ronaldo SIUUU' style={{ maxWidth: "300px", borderRadius: "10px" }} />
@@ -861,64 +1074,65 @@ function App() {
                   </div>
 
                   <div className='action-buttons'>
-                    <button className='btn-download btn-primary' onClick={handleDownload}>
+                    <button className='btn-download btn-primary' onClick={handleDownloadCompressed}>
                       <IconDownload />
                       <span>{t.download}</span>
                     </button>
-                    <button className='btn-action btn-secondary' onClick={handleReset}>
+                    <button className='btn-action btn-secondary' onClick={handleBackToTools}>
                       <IconCompress />
                       <span>{t.compressAnother}</span>
                     </button>
                   </div>
                 </div>
               )}
+
+              {/* ---- SPLITTER Result ---- */}
+              {selectedTool === "splitter" && splitResults && !processing && !error && (
+                <div className='result-section'>
+                  <div className='success-banner target-met'>
+                    <IconCheck />
+                    <div>
+                      <strong>{t.splitSuccessful}</strong>
+                      <p>
+                        Created {splitResults.numSplits} PDF{splitResults.numSplits !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className='split-results'>
+                    <h4>Split Files:</h4>
+                    {splitResults.splits.map((split, idx) => (
+                      <div key={idx} className='split-item'>
+                        <div className='split-info'>
+                          <IconFile />
+                          <div>
+                            <p className='split-name'>
+                              Split {idx + 1}: Pages {split.startPage}-{split.endPage}
+                            </p>
+                            <p className='split-size'>{formatBytes(split.bytes.length)}</p>
+                          </div>
+                        </div>
+                        <button className='btn-icon btn-primary' onClick={() => handleDownloadSplit(split)} title={t.download}>
+                          <IconDownload />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className='action-buttons'>
+                    <button className='btn-download btn-primary' onClick={handleDownloadAllSplits}>
+                      <IconDownload />
+                      <span>{t.downloadAll}</span>
+                    </button>
+                    <button className='btn-action btn-secondary' onClick={handleBackToTools}>
+                      <IconSplit />
+                      <span>{t.splitAnother}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* ==== Info cards ==== */}
-          <div className='info-section'>
-            <div className='info-card'>
-              <div className='info-header'>
-                <IconInfo />
-                <h3>{t.howItWorks}</h3>
-              </div>
-              <ul>
-                {t.howItWorksItems.map((item, i) => (
-                  <li key={i}>
-                    <strong>{item.title}</strong> {item.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className='info-card'>
-              <div className='info-header'>
-                <IconCheck />
-                <h3>{t.features}</h3>
-              </div>
-              <ul>
-                {t.featuresItems.map((item, i) => (
-                  <li key={i}>
-                    <strong>{item}</strong>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className='info-card'>
-              <div className='info-header'>
-                <IconAlert />
-                <h3>{t.bestResults}</h3>
-              </div>
-              <ul>
-                {t.bestResultsItems.map((item, i) => (
-                  <li key={i}>
-                    <strong>{item.title}</strong> {item.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
         </div>
       </main>
 
@@ -941,7 +1155,5 @@ function App() {
     </div>
   );
 }
-
-/*====================================================================*/
 
 export default App;
