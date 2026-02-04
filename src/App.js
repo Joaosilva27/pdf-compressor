@@ -101,6 +101,13 @@ const IconSplit = () => (
     <rect x='14' y='14' width='7' height='7' rx='1'></rect>
   </svg>
 );
+const IconMerge = () => (
+  <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+    <rect x='3' y='3' width='18' height='7' rx='1'></rect>
+    <rect x='3' y='14' width='7' height='7' rx='1'></rect>
+    <rect x='14' y='14' width='7' height='7' rx='1'></rect>
+  </svg>
+);
 const IconInfo = () => (
   <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
     <circle cx='12' cy='12' r='10'></circle>
@@ -328,6 +335,37 @@ async function splitPDF(pdfBytes, pagesPerSplit, onProgress) {
   return { splits: splitPdfs, totalPages, numSplits };
 }
 
+/* --------------------------------------------------------------
+   PDF MERGING FUNCTION
+   -------------------------------------------------------------- */
+async function mergePDFs(fileObjects, onProgress) {
+  onProgress(10, "Creating merged PDF…");
+  const mergedPdf = await PDFDocument.create();
+  let totalPages = 0;
+
+  for (let i = 0; i < fileObjects.length; i++) {
+    const fileObj = fileObjects[i];
+    onProgress(10 + (i / fileObjects.length) * 80, `Merging ${fileObj.fileName}…`);
+
+    const pdfDoc = await PDFDocument.load(fileObj.arrayBuffer, { ignoreEncryption: true });
+    const pageCount = pdfDoc.getPageCount();
+    const pageIndices = Array.from({ length: pageCount }, (_, idx) => idx);
+
+    const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
+    copiedPages.forEach(page => {
+      mergedPdf.addPage(page);
+    });
+
+    totalPages += pageCount;
+  }
+
+  onProgress(95, "Saving merged PDF…");
+  const mergedBytes = await mergedPdf.save({ useObjectStreams: true });
+  onProgress(100, "Done!");
+
+  return { bytes: mergedBytes, totalPages, success: true };
+}
+
 /* ------------------- VALIDATION ------------------- */
 function validatePDF(file) {
   if (!file) return { valid: false, error: "No file selected" };
@@ -354,6 +392,7 @@ function App() {
       brand: "PDF Multi-Tool",
       toolCompressor: "PDF Compressor",
       toolSplitter: "PDF Splitter",
+      toolMerger: "PDF Merger",
       selectTool: "Select a Tool",
       selectToolDesc: "Choose the PDF tool you want to use",
 
@@ -377,6 +416,24 @@ function App() {
       pdfs: "PDFs",
       pdf: "PDF",
 
+      // Merger
+      selectOrDropMerge: "Select or Drop PDFs to Merge",
+      dropMultiple: "Drop your PDFs here",
+      subtitleMerge: "Combine multiple PDFs into one file",
+      chooseFiles: "Choose Files",
+      mergeOrder: "Merge Order",
+      fileSelected: "file selected",
+      filesSelected: "files selected",
+      moveUp: "Move up",
+      moveDown: "Move down",
+      removeThisFile: "Remove this file",
+      startMerge: "Start Merge",
+      addMoreFiles: "Add More Files",
+      mergeAnother: "Merge Another Set",
+      merged: "Merged",
+      filesInto: "files into",
+      totalSize: "Total Size",
+
       // Common
       originalSize: "Original size",
       pages: "pages",
@@ -394,6 +451,8 @@ function App() {
       compressionComplete: "Compression Complete",
       splitSuccessful: "Split Successful!",
       splitComplete: "Split Complete",
+      mergeSuccessful: "Merge Successful!",
+      mergeComplete: "Merge Complete",
       reducedBy: "Reduced by",
       originalSizeLabel: "Original Size",
       compressedSize: "Compressed Size",
@@ -413,6 +472,7 @@ function App() {
       brand: "PDF Multi-Ferramenta",
       toolCompressor: "Compressor de PDF",
       toolSplitter: "Divisor de PDF",
+      toolMerger: "Unir PDFs",
       selectTool: "Seleciona uma Ferramenta",
       selectToolDesc: "Escolhe a ferramenta de PDF que queres usar",
 
@@ -436,6 +496,24 @@ function App() {
       pdfs: "PDFs",
       pdf: "PDF",
 
+      // Merger
+      selectOrDropMerge: "Seleciona ou Arrasta PDFs para Unir",
+      dropMultiple: "Larga os teus PDFs aqui",
+      subtitleMerge: "Combina vários PDFs num único ficheiro",
+      chooseFiles: "Escolher Ficheiros",
+      mergeOrder: "Ordem de União",
+      fileSelected: "ficheiro selecionado",
+      filesSelected: "ficheiros selecionados",
+      moveUp: "Mover para cima",
+      moveDown: "Mover para baixo",
+      removeThisFile: "Remover este ficheiro",
+      startMerge: "Iniciar União",
+      addMoreFiles: "Adicionar Mais Ficheiros",
+      mergeAnother: "Unir Outro Conjunto",
+      merged: "Uniu",
+      filesInto: "ficheiros em",
+      totalSize: "Tamanho Total",
+
       // Common
       originalSize: "Tamanho original",
       pages: "páginas",
@@ -453,6 +531,8 @@ function App() {
       compressionComplete: "Compressão Concluída",
       splitSuccessful: "Divisão Bem-Sucedida!",
       splitComplete: "Divisão Concluída",
+      mergeSuccessful: "União Bem-Sucedida!",
+      mergeComplete: "União Concluída",
       reducedBy: "Reduzido em",
       originalSizeLabel: "Tamanho Original",
       compressedSize: "Tamanho Comprimido",
@@ -484,7 +564,7 @@ function App() {
   }, [darkMode]);
 
   /* ---------- Tool Selection ---------- */
-  const [selectedTool, setSelectedTool] = useState(null); // 'compressor' or 'splitter'
+  const [selectedTool, setSelectedTool] = useState(null); // 'compressor' or 'splitter' or 'merger'
 
   /* ---------- State ---------- */
   const [file, setFile] = useState(null);
@@ -506,6 +586,11 @@ function App() {
   // Splitter specific
   const [pagesPerSplit, setPagesPerSplit] = useState(5);
   const [splitResults, setSplitResults] = useState(null);
+
+  // Merger specific
+  const [mergeFiles, setMergeFiles] = useState([]);
+  const [mergedBlob, setMergedBlob] = useState(null);
+  const [mergedSize, setMergedSize] = useState(0);
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -635,6 +720,115 @@ function App() {
     handleSplitFile(file);
   };
 
+  /* ---------- File handling - MERGER ---------- */
+  const handleMergeFiles = async selectedFiles => {
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    const newFiles = [];
+    let totalSize = 0;
+
+    for (const file of selectedFiles) {
+      const validation = validatePDF(file);
+      if (!validation.valid) {
+        setError(`${file.name}: ${validation.error}`);
+        continue;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      newFiles.push({
+        file,
+        arrayBuffer,
+        fileName: file.name,
+        size: file.size,
+        id: Date.now() + Math.random(),
+      });
+      totalSize += file.size;
+    }
+
+    if (newFiles.length > 0) {
+      setMergeFiles(prev => [...prev, ...newFiles]);
+      setOriginalSize(prev => prev + totalSize);
+    }
+  };
+
+  const handleRemoveMergeFile = id => {
+    setMergeFiles(prev => {
+      const fileToRemove = prev.find(f => f.id === id);
+      if (fileToRemove) {
+        setOriginalSize(prevSize => prevSize - fileToRemove.size);
+      }
+      return prev.filter(f => f.id !== id);
+    });
+  };
+
+  const handleMoveMergeFile = (id, direction) => {
+    setMergeFiles(prev => {
+      const index = prev.findIndex(f => f.id === id);
+      if (index === -1) return prev;
+
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+
+      const newFiles = [...prev];
+      [newFiles[index], newFiles[newIndex]] = [newFiles[newIndex], newFiles[index]];
+      return newFiles;
+    });
+  };
+
+  const handleStartMerge = async () => {
+    if (mergeFiles.length < 2) {
+      setError("Please select at least 2 PDF files to merge");
+      return;
+    }
+
+    setError(null);
+    setWarning(null);
+    setMergedBlob(null);
+    setProcessing(true);
+    setProgress(0);
+    setProgressMessage("Preparing…");
+
+    try {
+      const onProgress = (pct, msg) => {
+        setProgress(Math.round(pct));
+        setProgressMessage(msg);
+      };
+
+      const result = await mergePDFs(mergeFiles, onProgress);
+
+      const blob = new Blob([result.bytes], { type: "application/pdf" });
+
+      setMergedBlob(blob);
+      setMergedSize(blob.size);
+      setPageCount(result.totalPages);
+      setProcessing(false);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to merge PDFs.");
+      setProcessing(false);
+      setProgress(0);
+      setProgressMessage("");
+    }
+  };
+
+  /* ---------- Download - MERGER ---------- */
+  const handleDownloadMerged = () => {
+    if (!mergedBlob) return;
+    try {
+      const url = URL.createObjectURL(mergedBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `merged_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to download file. Please try again.");
+    }
+  };
+
   /* ---------- Download - COMPRESSOR ---------- */
   const handleDownloadCompressed = () => {
     if (!compressedBlob || !file) return;
@@ -689,6 +883,9 @@ function App() {
     setCompressedSize(0);
     setPageCount(0);
     setError(null);
+    setMergeFiles([]);
+    setMergedBlob(null);
+    setMergedSize(0);
     setWarning(null);
     setProgress(0);
     setProgressMessage("");
@@ -723,7 +920,14 @@ function App() {
     setIsDragging(false);
     dragCounter.current = 0;
     const files = e.dataTransfer.files;
-    if (files && files.length > 0) handleFileSelect(files[0]);
+
+    if (files && files.length > 0) {
+      if (selectedTool === "merger") {
+        handleMergeFiles(files);
+      } else {
+        handleFileSelect(files[0]);
+      }
+    }
   };
 
   /* ---------- Statistics ---------- */
@@ -766,7 +970,7 @@ function App() {
       <main className='main-content'>
         <div className='compress-container'>
           {/* ==== Tool Selection ==== */}
-          {!selectedTool && !file && (
+          {!selectedTool && !file && mergeFiles.length === 0 && (
             <div className='tool-selection'>
               <h2>{t.selectTool}</h2>
               <p className='tool-selection-desc'>{t.selectToolDesc}</p>
@@ -778,6 +982,10 @@ function App() {
                 <button className='tool-button' onClick={() => setSelectedTool("splitter")}>
                   <IconSplit />
                   <span>{t.toolSplitter}</span>
+                </button>
+                <button className='tool-button' onClick={() => setSelectedTool("merger")}>
+                  <IconMerge />
+                  <span>{t.toolMerger}</span>
                 </button>
               </div>
             </div>
@@ -896,6 +1104,175 @@ function App() {
               >
                 {t.backToTools}
               </button>
+            </div>
+          )}
+
+          {/* ==== MERGER Tool ==== */}
+          {selectedTool === "merger" && mergeFiles.length === 0 && (
+            <div
+              className={`upload-area ${isDragging ? "dragging" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <input ref={fileInputRef} type='file' accept='.pdf,application/pdf' multiple hidden onChange={e => handleMergeFiles(e.target.files)} />
+              <IconUpload />
+              <h3>{t.selectOrDropMerge}</h3>
+              <p className='upload-subtitle'>{isDragging ? t.dropMultiple : t.subtitleMerge}</p>
+
+              <button
+                className='btn-primary btn-upload'
+                onClick={e => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                {t.chooseFiles}
+              </button>
+
+              <button
+                className='btn-secondary btn-back'
+                onClick={e => {
+                  e.stopPropagation();
+                  setSelectedTool(null);
+                }}
+              >
+                {t.backToTools}
+              </button>
+            </div>
+          )}
+
+          {/* ==== MERGER File List ==== */}
+          {selectedTool === "merger" && mergeFiles.length > 0 && !mergedBlob && (
+            <div className='card compression-card'>
+              <div className='merge-header'>
+                <h3>{t.mergeOrder}</h3>
+                <p>
+                  {mergeFiles.length} {mergeFiles.length === 1 ? t.fileSelected : t.filesSelected}
+                </p>
+              </div>
+
+              <div className='merge-file-list'>
+                {mergeFiles.map((mergeFile, index) => (
+                  <div key={mergeFile.id} className='merge-file-item'>
+                    <div className='merge-file-number'>{index + 1}</div>
+                    <div className='merge-file-info'>
+                      <IconFile />
+                      <div>
+                        <p className='merge-file-name'>{mergeFile.fileName}</p>
+                        <p className='merge-file-size'>{formatBytes(mergeFile.size)}</p>
+                      </div>
+                    </div>
+                    <div className='merge-file-actions'>
+                      <button
+                        className='btn-icon'
+                        onClick={() => handleMoveMergeFile(mergeFile.id, "up")}
+                        disabled={index === 0 || processing}
+                        title={t.moveUp}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className='btn-icon'
+                        onClick={() => handleMoveMergeFile(mergeFile.id, "down")}
+                        disabled={index === mergeFiles.length - 1 || processing}
+                        title={t.moveDown}
+                      >
+                        ▼
+                      </button>
+                      <button
+                        className='btn-icon btn-danger'
+                        onClick={() => handleRemoveMergeFile(mergeFile.id)}
+                        disabled={processing}
+                        title={t.removeThisFile}
+                      >
+                        <IconTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ---- Progress while processing ---- */}
+              {processing && (
+                <div className='progress-section'>
+                  <div className='progress-bar'>
+                    <div className='progress-fill' style={{ width: `${progress}%` }}></div>
+                  </div>
+                  <div className='progress-info'>
+                    <p className='progress-text'>{progressMessage}</p>
+                    <p className='progress-percent'>{progress}%</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ---- Error ---- */}
+              {error && (
+                <div className='error-message'>
+                  <IconAlert />
+                  <div>
+                    <strong>{t.error}</strong>
+                    <p>{error}</p>
+                  </div>
+                </div>
+              )}
+
+              {!processing && (
+                <div className='action-buttons'>
+                  <button className='btn-primary' onClick={handleStartMerge} disabled={mergeFiles.length < 2}>
+                    <IconMerge />
+                    <span>{t.startMerge}</span>
+                  </button>
+                  <button className='btn-secondary' onClick={() => fileInputRef.current?.click()}>
+                    {t.addMoreFiles}
+                  </button>
+                  <button className='btn-secondary' onClick={handleBackToTools}>
+                    {t.backToTools}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ==== MERGER Result ==== */}
+          {selectedTool === "merger" && mergedBlob && !processing && !error && (
+            <div className='card compression-card'>
+              <div className='result-section'>
+                <div className='success-banner target-met'>
+                  <IconCheck />
+                  <div>
+                    <strong>{t.mergeSuccessful}</strong>
+                    <p>
+                      {t.merged} {mergeFiles.length} {t.filesInto} 1 PDF
+                    </p>
+                  </div>
+                </div>
+
+                <div className='result-stats'>
+                  <div className='stat-item'>
+                    <span className='stat-label'>{t.totalSize}</span>
+                    <span className='stat-value'>{formatBytes(mergedSize)}</span>
+                  </div>
+
+                  <div className='stat-item'>
+                    <span className='stat-label'>{t.pageCount}</span>
+                    <span className='stat-value'>{pageCount}</span>
+                  </div>
+                </div>
+
+                <div className='action-buttons'>
+                  <button className='btn-download btn-primary' onClick={handleDownloadMerged}>
+                    <IconDownload />
+                    <span>{t.download}</span>
+                  </button>
+                  <button className='btn-action btn-secondary' onClick={handleBackToTools}>
+                    <IconMerge />
+                    <span>{t.mergeAnother}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
