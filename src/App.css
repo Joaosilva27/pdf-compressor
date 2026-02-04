@@ -1964,6 +1964,8 @@ a:focus-visible {
   height: 100%;
   object-fit: contain;
   display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 /* Page Number Badge */

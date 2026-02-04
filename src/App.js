@@ -944,7 +944,7 @@ function App() {
 
       // Render all pages as thumbnails
       const pages = [];
-      const SCALE = 0.3; // Small scale for thumbnails
+      const SCALE = 1.5; // Increased scale for better quality (was 0.3)
 
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
@@ -957,7 +957,8 @@ function App() {
 
         await page.render({ canvasContext: ctx, viewport }).promise;
 
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        // Use PNG for better quality instead of JPEG
+        const dataUrl = canvas.toDataURL("image/png");
         canvas.remove();
 
         pages.push({
