@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Professional client-side PDF compression tool with privacy-first approach",
   "private": true,
-  "homepage": ".",
+  "homepage": "https://Joaosilva27.github.io/pdf-compressor",
   "author": {
     "name": "Conectys Team",
     "url": "https://github.com/Joaosilva27"
@@ -40,7 +40,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint src/**/*.{js,jsx}",
-    "format": "prettier --write src/**/*.{js,jsx,css,md}"
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
