@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/pdf-compressor/static/css/main.c3453c65.css",
+    "main.js": "/pdf-compressor/static/js/main.5d18ea6f.js",
+    "static/js/488.cfa34379.chunk.js": "/pdf-compressor/static/js/488.cfa34379.chunk.js",
+    "static/media/conectys.png": "/pdf-compressor/static/media/conectys.08aba113d830072e77b9.png",
+    "index.html": "/pdf-compressor/index.html",
+    "main.c3453c65.css.map": "/pdf-compressor/static/css/main.c3453c65.css.map",
+    "main.5d18ea6f.js.map": "/pdf-compressor/static/js/main.5d18ea6f.js.map",
+    "488.cfa34379.chunk.js.map": "/pdf-compressor/static/js/488.cfa34379.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c3453c65.css",
+    "static/js/main.5d18ea6f.js"
+  ]
+}

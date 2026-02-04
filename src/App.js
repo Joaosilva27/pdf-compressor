@@ -444,7 +444,7 @@ function App() {
       <nav className='navbar'>
         <div className='nav-brand'>
           <img src={ConectysLogo} alt='Conectys Logo' className='brand-logo' />
-          <span className='brand-text'>PDF Compressor Pro</span>
+          <span className='brand-text'>PDF Compressor</span>
         </div>
         <div className='nav-actions'>
           <button
@@ -676,7 +676,7 @@ function App() {
       {/* ---------- Footer ---------- */}
       <footer className='footer'>
         <div className='footer-content'>
-          <p>© 2026 PDF Compressor Pro. Free &amp; Open Source.</p>
+          <p>© 2026 PDF Compressor. Free &amp; Open Source.</p>
           <a
             href='https://github.com/Joaosilva27/pdf-compressor'
             target='_blank'
