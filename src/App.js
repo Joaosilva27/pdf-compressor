@@ -67,6 +67,32 @@ const IconEnglishFlag = () => (
     </g>
   </svg>
 );
+const IconPolishFlag = () => (
+  <svg className='icon flag-icon' viewBox='0 0 640 400'>
+    <rect width='640' height='400' fill='#DC143C' />
+    <rect width='640' height='200' fill='#FFFFFF' />
+  </svg>
+);
+const IconRomanianFlag = () => (
+  <svg className='icon flag-icon' viewBox='0 0 900 600'>
+    <rect width='300' height='600' fill='#002B7F' />
+    <rect x='300' width='300' height='600' fill='#FCD116' />
+    <rect x='600' width='300' height='600' fill='#CE1126' />
+  </svg>
+);
+const IconFilipinoFlag = () => (
+  <svg className='icon flag-icon' viewBox='0 0 1200 600'>
+    <rect width='1200' height='300' fill='#0038A8' />
+    <rect y='300' width='1200' height='300' fill='#CE1126' />
+    <path d='M 0,0 L 400,300 L 0,600 Z' fill='#FFFFFF' />
+    <circle cx='200' cy='300' r='80' fill='#FCD116' />
+    <g fill='#FCD116'>
+      <polygon points='200,220 210,260 250,260 218,283 228,323 200,300 172,323 182,283 150,260 190,260' />
+      <polygon points='120,180 130,220 170,220 138,243 148,283 120,260 92,283 102,243 70,220 110,220' transform='rotate(-30 200 300)' />
+      <polygon points='120,420 130,380 170,380 138,357 148,317 120,340 92,317 102,357 70,380 110,380' transform='rotate(30 200 300)' />
+    </g>
+  </svg>
+);
 const IconGitHub = () => (
   <svg className='github-icon' viewBox='0 0 24 24' fill='currentColor'>
     <path d='M12 .5C5.73.5.5 5.74.5 12.02c0 5.11 3.29 9.45 7.86 10.98.58.11.79-.25.79-.56v-2.02c-3.2.7-3.87-1.55-3.87-1.55-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.75 2.67 1.24 3.32.95.1-.74.4-1.24.72-1.53-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.3 1.18-3.11-.12-.29-.51-1.45.11-3.02 0 0 .97-.31 3.18 1.19a11.05 11.05 0 0 1 5.8 0c2.2-1.5 3.17-1.19 3.17-1.19.63 1.57.24 2.73.12 3.02.73.81 1.17 1.85 1.17 3.11 0 4.42-2.69 5.39-5.25 5.67.41.35.77 1.04.77 2.1v3.12c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.74 18.27.5 12 .5z' />
@@ -642,6 +668,297 @@ function App() {
       footer: "© 2026 PDF Multi-Ferramenta. Gratuito e Código Aberto.",
       githubText: "Ver no GitHub",
     },
+    pl: {
+      brand: "Narzędzie PDF",
+      toolCompressor: "Kompresor PDF",
+      toolSplitter: "Dzielenie PDF",
+      toolMerger: "Łączenie PDF",
+      toolExtractor: "Ekstraktor Stron",
+      selectTool: "Wybierz Narzędzie",
+      selectToolDesc: "Wybierz narzędzie PDF, którego chcesz użyć",
+
+      // Compressor
+      selectOrDrop: "Wybierz lub Upuść PDF do Kompresji",
+      dropHere: "Upuść swój PDF tutaj",
+      subtitle: "Szybka, bezpieczna kompresja po stronie klienta",
+      chooseFile: "Wybierz Plik",
+      qualityLabel: "Jakość Kompresji",
+      qualityLow: "Maksymalna Kompresja",
+      qualityHigh: "Maksymalna Jakość",
+      qualityDescription: "Niższa jakość = mniejszy rozmiar pliku, Wyższa jakość = lepsza wierność wizualna",
+
+      // Splitter
+      selectOrDropSplit: "Wybierz lub Upuść PDF do Podziału",
+      subtitleSplit: "Podziel swój PDF na wiele plików",
+      pagesPerSplit: "Stron na Podział",
+      pagesPerSplitDesc: "Ile stron w każdym podzielonym PDF",
+      splitPreview: "Podgląd Podziału",
+      willCreate: "Utworzy",
+      pdfs: "plików PDF",
+      pdf: "plik PDF",
+
+      // Merger
+      selectOrDropMerge: "Wybierz lub Upuść PDF do Połączenia",
+      dropMultiple: "Upuść swoje pliki PDF tutaj",
+      subtitleMerge: "Połącz wiele plików PDF w jeden",
+      chooseFiles: "Wybierz Pliki",
+      mergeOrder: "Kolejność Łączenia",
+      fileSelected: "plik wybrany",
+      filesSelected: "pliki wybrane",
+      moveUp: "Przesuń w górę",
+      moveDown: "Przesuń w dół",
+      removeThisFile: "Usuń ten plik",
+      startMerge: "Rozpocznij Łączenie",
+      addMoreFiles: "Dodaj Więcej Plików",
+      mergeAnother: "Połącz Kolejny Zestaw",
+      merged: "Połączono",
+      filesInto: "plików w",
+      totalSize: "Całkowity Rozmiar",
+
+      // Extractor
+      selectOrDropExtract: "Wybierz lub Upuść PDF do Wyodrębnienia Stron",
+      subtitleExtract: "Wybierz konkretne strony do wyodrębnienia",
+      selectPages: "Wybierz Strony",
+      selectedPages: "Wybrane Strony",
+      noPages: "Nie wybrano stron",
+      clickPages: "Kliknij strony, aby je wybrać/odznaczyć",
+      extractPages: "Wyodrębnij Strony",
+      clearSelection: "Wyczyść Wybór",
+      selectAll: "Zaznacz Wszystkie",
+      extractAnother: "Wyodrębnij z Innego Pliku",
+      extractSuccessful: "Wyodrębnienie Udane!",
+      extractComplete: "Wyodrębnienie Zakończone",
+      extracted: "Wyodrębniono",
+      pagesExtracted: "stron",
+
+      // Common
+      originalSize: "Oryginalny rozmiar",
+      pages: "stron",
+      page: "strona",
+      removeFile: "Usuń plik",
+      error: "Błąd",
+      note: "Uwaga",
+      processing: "Przetwarzanie",
+      download: "Pobierz",
+      downloadAll: "Pobierz Wszystkie",
+      backToTools: "Powrót do Narzędzi",
+
+      // Results
+      compressionSuccessful: "Kompresja Udana!",
+      compressionComplete: "Kompresja Zakończona",
+      splitSuccessful: "Podział Udany!",
+      splitComplete: "Podział Zakończony",
+      mergeSuccessful: "Łączenie Udane!",
+      mergeComplete: "Łączenie Zakończone",
+      reducedBy: "Zmniejszono o",
+      originalSizeLabel: "Oryginalny Rozmiar",
+      compressedSize: "Rozmiar Skompresowany",
+      sizeReduction: "Redukcja Rozmiaru",
+      bytesSaved: "Zaoszczędzone Bajty",
+      targetLabel: "Cel 10 MB",
+      met: "✓ Osiągnięty",
+      exceeded: "⚠ Przekroczony",
+      pageCount: "Liczba Stron",
+      compressAnother: "Kompresuj Inny Plik",
+      splitAnother: "Podziel Inny Plik",
+
+      footer: "© 2026 Narzędzie PDF. Darmowe i Open Source.",
+      githubText: "Zobacz na GitHub",
+    },
+    ro: {
+      brand: "Instrument PDF",
+      toolCompressor: "Compresor PDF",
+      toolSplitter: "Împărțire PDF",
+      toolMerger: "Unire PDF",
+      toolExtractor: "Extractor Pagini",
+      selectTool: "Selectează un Instrument",
+      selectToolDesc: "Alege instrumentul PDF pe care vrei să-l folosești",
+
+      // Compressor
+      selectOrDrop: "Selectează sau Trage PDF pentru Comprimare",
+      dropHere: "Pune PDF-ul tău aici",
+      subtitle: "Comprimare rapidă, sigură, pe partea clientului",
+      chooseFile: "Alege Fișier",
+      qualityLabel: "Calitatea Comprimării",
+      qualityLow: "Comprimare Maximă",
+      qualityHigh: "Calitate Maximă",
+      qualityDescription: "Calitate mai mică = fișier mai mic, Calitate mai mare = fidelitate vizuală mai bună",
+
+      // Splitter
+      selectOrDropSplit: "Selectează sau Trage PDF pentru Împărțire",
+      subtitleSplit: "Împarte PDF-ul tău în mai multe fișiere",
+      pagesPerSplit: "Pagini per Împărțire",
+      pagesPerSplitDesc: "Câte pagini în fiecare PDF împărțit",
+      splitPreview: "Previzualizare Împărțire",
+      willCreate: "Va crea",
+      pdfs: "fișiere PDF",
+      pdf: "fișier PDF",
+
+      // Merger
+      selectOrDropMerge: "Selectează sau Trage PDF-uri pentru Unire",
+      dropMultiple: "Pune PDF-urile tale aici",
+      subtitleMerge: "Combină mai multe PDF-uri într-un singur fișier",
+      chooseFiles: "Alege Fișiere",
+      mergeOrder: "Ordinea de Unire",
+      fileSelected: "fișier selectat",
+      filesSelected: "fișiere selectate",
+      moveUp: "Mută în sus",
+      moveDown: "Mută în jos",
+      removeThisFile: "Elimină acest fișier",
+      startMerge: "Începe Unirea",
+      addMoreFiles: "Adaugă Mai Multe Fișiere",
+      mergeAnother: "Unește Alt Set",
+      merged: "Unit",
+      filesInto: "fișiere în",
+      totalSize: "Dimensiune Totală",
+
+      // Extractor
+      selectOrDropExtract: "Selectează sau Trage PDF pentru Extragere Pagini",
+      subtitleExtract: "Alege pagini specifice pentru extragere",
+      selectPages: "Selectează Pagini",
+      selectedPages: "Pagini Selectate",
+      noPages: "Nicio pagină selectată",
+      clickPages: "Dă click pe pagini pentru a le selecta/deselecta",
+      extractPages: "Extrage Pagini",
+      clearSelection: "Șterge Selecția",
+      selectAll: "Selectează Toate",
+      extractAnother: "Extrage din Alt Fișier",
+      extractSuccessful: "Extragere Reușită!",
+      extractComplete: "Extragere Completă",
+      extracted: "Extras",
+      pagesExtracted: "pagini",
+
+      // Common
+      originalSize: "Dimensiune originală",
+      pages: "pagini",
+      page: "pagină",
+      removeFile: "Elimină fișier",
+      error: "Eroare",
+      note: "Notă",
+      processing: "Se procesează",
+      download: "Descarcă",
+      downloadAll: "Descarcă Toate",
+      backToTools: "Înapoi la Instrumente",
+
+      // Results
+      compressionSuccessful: "Comprimare Reușită!",
+      compressionComplete: "Comprimare Completă",
+      splitSuccessful: "Împărțire Reușită!",
+      splitComplete: "Împărțire Completă",
+      mergeSuccessful: "Unire Reușită!",
+      mergeComplete: "Unire Completă",
+      reducedBy: "Redus cu",
+      originalSizeLabel: "Dimensiune Originală",
+      compressedSize: "Dimensiune Comprimată",
+      sizeReduction: "Reducere Dimensiune",
+      bytesSaved: "Octeți Economisiți",
+      targetLabel: "Țintă 10 MB",
+      met: "✓ Atins",
+      exceeded: "⚠ Depășit",
+      pageCount: "Număr Pagini",
+      compressAnother: "Comprimă Alt Fișier",
+      splitAnother: "Împarte Alt Fișier",
+
+      footer: "© 2026 Instrument PDF. Gratuit & Open Source.",
+      githubText: "Vezi pe GitHub",
+    },
+    fil: {
+      brand: "PDF Multi-Tool",
+      toolCompressor: "PDF Compressor",
+      toolSplitter: "Paghahati ng PDF",
+      toolMerger: "Pagsasama ng PDF",
+      toolExtractor: "Tagakuha ng Pahina",
+      selectTool: "Pumili ng Tool",
+      selectToolDesc: "Piliin ang PDF tool na gusto mong gamitin",
+
+      // Compressor
+      selectOrDrop: "Pumili o I-drop ang PDF para i-compress",
+      dropHere: "I-drop ang iyong PDF dito",
+      subtitle: "Mabilis, secure, client-side compression",
+      chooseFile: "Pumili ng File",
+      qualityLabel: "Kalidad ng Compression",
+      qualityLow: "Maximum Compression",
+      qualityHigh: "Maximum na Kalidad",
+      qualityDescription: "Mas mababang kalidad = mas maliit na file, Mas mataas na kalidad = mas magandang visual",
+
+      // Splitter
+      selectOrDropSplit: "Pumili o I-drop ang PDF para hatiin",
+      subtitleSplit: "Hatiin ang iyong PDF sa maraming file",
+      pagesPerSplit: "Mga Pahina bawat Hati",
+      pagesPerSplitDesc: "Ilang pahina sa bawat nahatiang PDF",
+      splitPreview: "Preview ng Paghahati",
+      willCreate: "Gagawa ng",
+      pdfs: "mga PDF",
+      pdf: "PDF",
+
+      // Merger
+      selectOrDropMerge: "Pumili o I-drop ang mga PDF para pagsamahin",
+      dropMultiple: "I-drop ang iyong mga PDF dito",
+      subtitleMerge: "Pagsamahin ang maraming PDF sa isang file",
+      chooseFiles: "Pumili ng mga File",
+      mergeOrder: "Pagkakasunod-sunod ng Pagsasama",
+      fileSelected: "file na napili",
+      filesSelected: "mga file na napili",
+      moveUp: "Ilipat pataas",
+      moveDown: "Ilipat pababa",
+      removeThisFile: "Alisin ang file na ito",
+      startMerge: "Simulan ang Pagsasama",
+      addMoreFiles: "Magdagdag ng Higit pang mga File",
+      mergeAnother: "Pagsamahin ang Iba Pang Set",
+      merged: "Pinagsama",
+      filesInto: "mga file sa",
+      totalSize: "Kabuuang Laki",
+
+      // Extractor
+      selectOrDropExtract: "Pumili o I-drop ang PDF para Kunin ang mga Pahina",
+      subtitleExtract: "Pumili ng mga partikular na pahina para kunin",
+      selectPages: "Pumili ng mga Pahina",
+      selectedPages: "Mga Napiling Pahina",
+      noPages: "Walang napiling pahina",
+      clickPages: "I-click ang mga pahina para piliin/alisin sa pagpili",
+      extractPages: "Kunin ang mga Pahina",
+      clearSelection: "I-clear ang Pagpili",
+      selectAll: "Piliin Lahat",
+      extractAnother: "Kunin mula sa Ibang File",
+      extractSuccessful: "Matagumpay ang Pagkuha!",
+      extractComplete: "Kumpleto ang Pagkuha",
+      extracted: "Kinuha",
+      pagesExtracted: "mga pahina",
+
+      // Common
+      originalSize: "Orihinal na laki",
+      pages: "mga pahina",
+      page: "pahina",
+      removeFile: "Alisin ang file",
+      error: "Error",
+      note: "Paalala",
+      processing: "Pinoproseso",
+      download: "I-download",
+      downloadAll: "I-download Lahat",
+      backToTools: "Bumalik sa mga Tool",
+
+      // Results
+      compressionSuccessful: "Matagumpay ang Compression!",
+      compressionComplete: "Kumpleto ang Compression",
+      splitSuccessful: "Matagumpay ang Paghahati!",
+      splitComplete: "Kumpleto ang Paghahati",
+      mergeSuccessful: "Matagumpay ang Pagsasama!",
+      mergeComplete: "Kumpleto ang Pagsasama",
+      reducedBy: "Nabawasan ng",
+      originalSizeLabel: "Orihinal na Laki",
+      compressedSize: "Laki ng Compressed",
+      sizeReduction: "Pagbawas ng Laki",
+      bytesSaved: "Mga Byte na Naipon",
+      targetLabel: "Target na 10 MB",
+      met: "✓ Naabot",
+      exceeded: "⚠ Lumampas",
+      pageCount: "Bilang ng Pahina",
+      compressAnother: "I-compress ang Ibang File",
+      splitAnother: "Hatiin ang Ibang File",
+
+      footer: "© 2026 PDF Multi-Tool. Libre at Open Source.",
+      githubText: "Tingnan sa GitHub",
+    },
   };
 
   const t = translations[language];
@@ -709,6 +1026,47 @@ function App() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
   }, []);
+
+  const cycleLanguage = () => {
+    const languages = ["en", "pt", "pl", "ro", "fil"];
+    const currentIndex = languages.indexOf(language);
+    const nextIndex = (currentIndex + 1) % languages.length;
+    setLanguage(languages[nextIndex]);
+  };
+
+  const getLanguageFlag = () => {
+    switch (language) {
+      case "en":
+        return <IconEnglishFlag />;
+      case "pt":
+        return <IconPortugueseFlag />;
+      case "pl":
+        return <IconPolishFlag />;
+      case "ro":
+        return <IconRomanianFlag />;
+      case "fil":
+        return <IconFilipinoFlag />;
+      default:
+        return <IconEnglishFlag />;
+    }
+  };
+
+  const getLanguageName = () => {
+    switch (language) {
+      case "en":
+        return "English";
+      case "pt":
+        return "Português";
+      case "pl":
+        return "Polski";
+      case "ro":
+        return "Română";
+      case "fil":
+        return "Filipino";
+      default:
+        return "English";
+    }
+  };
 
   /* ---------- File handling - COMPRESSOR ---------- */
   const handleCompressFile = async selectedFile => {
@@ -1222,13 +1580,8 @@ function App() {
           <span className='brand-text'>{t.brand}</span>
         </div>
         <div className='nav-actions'>
-          <button
-            className='btn-icon'
-            onClick={() => setLanguage(language === "en" ? "pt" : "en")}
-            aria-label='Toggle language'
-            title={language === "en" ? "Mudar para Português" : "Switch to English"}
-          >
-            {language === "en" ? <IconPortugueseFlag /> : <IconEnglishFlag />}
+          <button className='btn-icon' onClick={cycleLanguage} aria-label='Toggle language' title={`Language: ${getLanguageName()}`}>
+            {getLanguageFlag()}
           </button>
           <button
             className='btn-icon'
