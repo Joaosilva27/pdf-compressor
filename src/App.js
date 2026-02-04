@@ -116,6 +116,21 @@ const IconExtract = () => (
     <line x1='12' y1='12' x2='12' y2='18'></line>
   </svg>
 );
+const IconZoomIn = () => (
+  <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+    <circle cx='11' cy='11' r='8'></circle>
+    <line x1='21' y1='21' x2='16.65' y2='16.65'></line>
+    <line x1='11' y1='8' x2='11' y2='14'></line>
+    <line x1='8' y1='11' x2='14' y2='11'></line>
+  </svg>
+);
+const IconZoomOut = () => (
+  <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+    <circle cx='11' cy='11' r='8'></circle>
+    <line x1='21' y1='21' x2='16.65' y2='16.65'></line>
+    <line x1='8' y1='11' x2='14' y2='11'></line>
+  </svg>
+);
 const IconInfo = () => (
   <svg className='icon' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
     <circle cx='12' cy='12' r='10'></circle>
@@ -678,6 +693,7 @@ function App() {
   const [extractedBlob, setExtractedBlob] = useState(null);
   const [extractedSize, setExtractedSize] = useState(0);
   const [loadingPages, setLoadingPages] = useState(false);
+  const [thumbnailZoom, setThumbnailZoom] = useState(150); // Default 150px
 
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -985,6 +1001,14 @@ function App() {
     setSelectedPages(new Set());
   };
 
+  const handleZoomIn = () => {
+    setThumbnailZoom(prev => Math.min(prev + 50, 400)); // Max 400px
+  };
+
+  const handleZoomOut = () => {
+    setThumbnailZoom(prev => Math.max(prev - 50, 100)); // Min 100px
+  };
+
   const handleStartExtraction = async () => {
     if (selectedPages.size === 0) {
       setError("Please select at least one page to extract");
@@ -1135,6 +1159,7 @@ function App() {
     setExtractedBlob(null);
     setExtractedSize(0);
     setLoadingPages(false);
+    setThumbnailZoom(150);
     setWarning(null);
     setProgress(0);
     setProgressMessage("");
@@ -1608,17 +1633,28 @@ function App() {
                   </div>
 
                   <div className='extractor-controls'>
-                    <button className='btn-secondary btn-small' onClick={handleSelectAllPages} disabled={processing}>
-                      {selectedPages.size === pageCount ? t.clearSelection : t.selectAll}
-                    </button>
-                    {selectedPages.size > 0 && (
-                      <button className='btn-secondary btn-small' onClick={handleClearSelection} disabled={processing}>
-                        {t.clearSelection}
+                    <div className='extractor-controls-left'>
+                      <button className='btn-secondary btn-small' onClick={handleSelectAllPages} disabled={processing}>
+                        {selectedPages.size === pageCount ? t.clearSelection : t.selectAll}
                       </button>
-                    )}
+                      {selectedPages.size > 0 && (
+                        <button className='btn-secondary btn-small' onClick={handleClearSelection} disabled={processing}>
+                          {t.clearSelection}
+                        </button>
+                      )}
+                    </div>
+                    <div className='extractor-controls-right'>
+                      <span className='zoom-label'>Size: {thumbnailZoom}px</span>
+                      <button className='btn-icon btn-zoom' onClick={handleZoomOut} disabled={processing || thumbnailZoom <= 100} title='Zoom Out'>
+                        <IconZoomOut />
+                      </button>
+                      <button className='btn-icon btn-zoom' onClick={handleZoomIn} disabled={processing || thumbnailZoom >= 400} title='Zoom In'>
+                        <IconZoomIn />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className='pdf-page-grid'>
+                  <div className='pdf-page-grid' style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${thumbnailZoom}px, 1fr))` }}>
                     {pdfPages.map(page => (
                       <div
                         key={page.pageNumber}

@@ -1839,10 +1839,66 @@ a:focus-visible {
 /* Extractor Controls */
 .extractor-controls {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
   padding: 15px 20px;
   border-bottom: 1px solid var(--border-color, #e0e0e0);
   flex-wrap: wrap;
+}
+
+.extractor-controls-left {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.extractor-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  font-weight: 500;
+  min-width: 80px;
+  text-align: right;
+}
+
+.btn-zoom {
+  width: 36px;
+  height: 36px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--bg-secondary, #f3f4f6);
+  border: 1px solid var(--border-color, #e0e0e0);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-zoom:hover:not(:disabled) {
+  background: var(--primary-color, #2563eb);
+  border-color: var(--primary-color, #2563eb);
+}
+
+.btn-zoom:hover:not(:disabled) svg {
+  stroke: white;
+}
+
+.btn-zoom:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-zoom svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-primary, #1a1a1a);
 }
 
 .btn-small {
@@ -1975,6 +2031,24 @@ a:focus-visible {
   border-bottom-color: #374151;
 }
 
+.dark .zoom-label {
+  color: #9ca3af;
+}
+
+.dark .btn-zoom {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark .btn-zoom:hover:not(:disabled) {
+  background: #60a5fa;
+  border-color: #60a5fa;
+}
+
+.dark .btn-zoom svg {
+  stroke: #f9fafb;
+}
+
 .dark .pdf-page-grid::-webkit-scrollbar-track {
   background: #1f2937;
 }
@@ -2008,7 +2082,6 @@ a:focus-visible {
 /* Responsive Design */
 @media (max-width: 768px) {
   .pdf-page-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
     padding: 15px;
     max-height: 400px;
@@ -2020,6 +2093,24 @@ a:focus-visible {
 
   .extractor-controls {
     padding: 12px 15px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .extractor-controls-left,
+  .extractor-controls-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .zoom-label {
+    min-width: 70px;
+    font-size: 0.85rem;
+  }
+
+  .btn-zoom {
+    width: 34px;
+    height: 34px;
   }
 
   .page-number {
@@ -2040,9 +2131,18 @@ a:focus-visible {
 
 @media (max-width: 480px) {
   .pdf-page-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 8px;
     padding: 10px;
+  }
+
+  .btn-zoom {
+    width: 32px;
+    height: 32px;
+  }
+
+  .btn-zoom svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
